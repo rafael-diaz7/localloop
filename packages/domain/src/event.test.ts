@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { eventSearchFiltersSchema, localLoopEventSchema } from ".";
+import {
+  eventPriceStatusSchema,
+  eventSearchFiltersSchema,
+  eventStatusSchema,
+  localLoopEventSchema
+} from ".";
 
 describe("eventSearchFiltersSchema", () => {
   it("applies default search filters", () => {
@@ -33,5 +38,14 @@ describe("localLoopEventSchema", () => {
 
     expect(event.title).toBe("Neighborhood Market");
     expect(event.startAt).toBeInstanceOf(Date);
+    expect(event.priceStatus).toBe("unknown");
+    expect(event.status).toBe("active");
+  });
+});
+
+describe("event status schemas", () => {
+  it("validates event price and lifecycle statuses", () => {
+    expect(eventPriceStatusSchema.parse("free")).toBe("free");
+    expect(eventStatusSchema.parse("active")).toBe("active");
   });
 });

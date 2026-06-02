@@ -17,6 +17,7 @@
     "format:check": "prettier --check .",
     "db:generate": "pnpm --filter @localloop/db db:generate",
     "db:migrate": "pnpm --filter @localloop/db db:migrate",
+    "db:seed": "pnpm --filter @localloop/db db:seed",
     "db:studio": "pnpm --filter @localloop/db db:studio"
   },
   "devDependencies": {

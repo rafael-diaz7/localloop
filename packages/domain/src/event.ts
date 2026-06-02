@@ -2,6 +2,14 @@ import { z } from "zod";
 
 import { eventCategorySchema } from "./categories";
 
+export const eventPriceStatuses = ["free", "paid", "unknown"] as const;
+export const eventPriceStatusSchema = z.enum(eventPriceStatuses);
+export type EventPriceStatus = z.infer<typeof eventPriceStatusSchema>;
+
+export const eventStatuses = ["active", "cancelled"] as const;
+export const eventStatusSchema = z.enum(eventStatuses);
+export type EventStatus = z.infer<typeof eventStatusSchema>;
+
 export const eventSearchFiltersSchema = z
   .object({
     location: z.string().trim().min(1).optional(),
@@ -36,10 +44,12 @@ export const localLoopEventSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   category: eventCategorySchema,
+  priceStatus: eventPriceStatusSchema.default("unknown"),
   priceCents: z.number().int().nonnegative().optional(),
   priceLabel: z.string().trim().optional(),
   source: z.string().trim().min(1),
-  sourceUrl: z.string().url().optional()
+  sourceUrl: z.string().url().optional(),
+  status: eventStatusSchema.default("active")
 });
 
 export type LocalLoopEvent = z.infer<typeof localLoopEventSchema>;

@@ -1,4 +1,5 @@
 import { eventCategories } from "@localloop/domain";
+import Link from "next/link";
 
 const foundationItems = [
   "Next.js App Router",
@@ -20,6 +21,12 @@ export default function HomePage() {
           <p className="mt-6 text-lg leading-8 text-loop-ink/75 md:text-xl">
             Initial development foundation for an open-source DMV-area event discovery app.
           </p>
+          <Link
+            href="/events"
+            className="mt-8 inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink"
+          >
+            View sample events
+          </Link>
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-[1fr_1.2fr]">

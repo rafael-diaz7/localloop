@@ -3,9 +3,10 @@
 LocalLoop is an open-source local event discovery web app for finding upcoming
 DMV-area events by location, radius, date, category, and price.
 
-This repository currently contains only the initial local development scaffold.
-Real event ingestion, geocoding, radius search, authentication, email digests,
-maps, and deployment are intentionally out of scope for this phase.
+This repository currently contains the initial local development scaffold plus
+seeded development event listings backed by PostgreSQL/PostGIS. Real event
+ingestion, geocoding, radius search, authentication, email digests, maps, and
+deployment are intentionally out of scope for this phase.
 
 ## Stack
 
@@ -32,12 +33,17 @@ maps, and deployment are intentionally out of scope for this phase.
 pnpm install
 cp .env.example .env
 docker compose -f infra/docker-compose.yml up -d
-pnpm db:generate
 pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
 
-The web app runs at <http://localhost:3000>.
+The web app runs at <http://localhost:3000>. Visit
+<http://localhost:3000/events> to view the seeded local development/demo events.
+
+The seeded listings are fictional sample data for local development only. They
+are safe to seed more than once and should not be treated as live real-world
+event listings.
 
 ## Workspace Layout
 
@@ -60,6 +66,8 @@ pnpm typecheck     Type-check all workspaces
 pnpm lint          Run ESLint
 pnpm test          Run Vitest across workspaces
 pnpm format:check  Check Prettier formatting
+pnpm db:migrate    Run Drizzle migrations
+pnpm db:seed       Seed fictional local development events
 ```
 
 ## License

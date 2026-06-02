@@ -20,6 +20,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx src/seed.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

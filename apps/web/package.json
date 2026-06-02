@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@localloop/db": "workspace:*",
     "@localloop/domain": "workspace:*",
     "@localloop/providers": "workspace:*",
     "next": "^15.3.3",
