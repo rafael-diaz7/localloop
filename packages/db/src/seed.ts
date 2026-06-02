@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createDbConnection } from "./client";
-import { eventCategoriesTable, events, venues } from "./schema";
+import { eventCategoriesTable, events, sources, venues } from "./schema";
 
 type SeedVenue = {
   seedId: string;
@@ -224,6 +224,22 @@ export async function seedDatabase(now = new Date()) {
   try {
     await connection.db.transaction(async (tx) => {
       const venueIds = new Map<string, string>();
+
+      await tx
+        .insert(sources)
+        .values({
+          key: SOURCE,
+          displayName: "Demo data",
+          platform: "LocalLoop seed"
+        })
+        .onConflictDoUpdate({
+          target: sources.key,
+          set: {
+            displayName: "Demo data",
+            platform: "LocalLoop seed",
+            updatedAt: new Date()
+          }
+        });
 
       for (const venue of seedVenues) {
         const [row] = await tx

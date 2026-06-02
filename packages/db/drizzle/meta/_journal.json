@@ -8,6 +8,20 @@
       "when": 1780357908322,
       "tag": "0000_wooden_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780379789747,
+      "tag": "0001_crazy_enchantress",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780380227838,
+      "tag": "0002_flippant_stellaris",
+      "breakpoints": true
     }
   ]
 }

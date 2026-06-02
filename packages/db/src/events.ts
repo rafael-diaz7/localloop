@@ -2,7 +2,7 @@ import type { EventCategory } from "@localloop/domain";
 import { and, asc, eq, gte } from "drizzle-orm";
 
 import type { DbClient } from "./client";
-import { eventCategoriesTable, events, venues } from "./schema";
+import { eventCategoriesTable, events, sources, venues } from "./schema";
 
 export type UpcomingEvent = {
   id: string;
@@ -20,6 +20,7 @@ export type UpcomingEvent = {
   maxPriceCents: number | null;
   currency: string | null;
   sourceUrl: string;
+  sourceDisplayName: string;
 };
 
 export async function listUpcomingEvents(db: DbClient, now = new Date()): Promise<UpcomingEvent[]> {
@@ -39,11 +40,14 @@ export async function listUpcomingEvents(db: DbClient, now = new Date()): Promis
       minPriceCents: events.minPriceCents,
       maxPriceCents: events.maxPriceCents,
       currency: events.currency,
-      sourceUrl: events.sourceUrl
+      sourceUrl: events.sourceUrl,
+      sourceKey: events.source,
+      sourceDisplayName: sources.displayName
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
     .leftJoin(eventCategoriesTable, eq(events.id, eventCategoriesTable.eventId))
+    .leftJoin(sources, eq(events.source, sources.key))
     .where(and(eq(events.status, "active"), gte(events.startAt, now)))
     .orderBy(asc(events.startAt), asc(events.title));
 
@@ -74,9 +78,14 @@ export async function listUpcomingEvents(db: DbClient, now = new Date()): Promis
       minPriceCents: row.minPriceCents,
       maxPriceCents: row.maxPriceCents,
       currency: row.currency,
-      sourceUrl: row.sourceUrl
+      sourceUrl: row.sourceUrl,
+      sourceDisplayName: row.sourceDisplayName ?? fallbackSourceDisplayName(row.sourceKey)
     });
   }
 
   return [...eventsById.values()];
+}
+
+function fallbackSourceDisplayName(sourceKey: string) {
+  return sourceKey === "local-seed" ? "Demo data" : sourceKey;
 }

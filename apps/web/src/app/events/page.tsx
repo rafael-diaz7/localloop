@@ -37,14 +37,14 @@ export default async function EventsPage() {
 
         <div className="mt-8 max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-wide text-loop-moss">
-            Development data
+            Local event listings
           </p>
           <h1 className="mt-4 text-4xl font-semibold leading-tight md:text-5xl">
-            Sample local events
+            Upcoming DMV events
           </h1>
           <p className="mt-5 text-base leading-7 text-loop-ink/75 md:text-lg">
-            These read-only listings come from the local PostGIS database seed. Real source
-            ingestion and location-based filtering are not implemented yet.
+            These read-only listings come from normalized LocalLoop event records. Source coverage
+            is intentionally incomplete while provider ingestion is being built.
           </p>
         </div>
 
@@ -122,8 +122,11 @@ function EventList({ events }: { events: UpcomingEvent[] }) {
             rel="noreferrer"
             className="mt-5 inline-flex text-sm font-semibold text-loop-moss underline-offset-4 hover:underline"
           >
-            View sample source
+            View source
           </a>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-loop-ink/50">
+            Source: {event.sourceDisplayName}
+          </p>
         </article>
       ))}
     </section>

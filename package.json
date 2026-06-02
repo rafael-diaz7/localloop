@@ -18,7 +18,8 @@
     "db:generate": "pnpm --filter @localloop/db db:generate",
     "db:migrate": "pnpm --filter @localloop/db db:migrate",
     "db:seed": "pnpm --filter @localloop/db db:seed",
-    "db:studio": "pnpm --filter @localloop/db db:studio"
+    "db:studio": "pnpm --filter @localloop/db db:studio",
+    "ingest:ticketmaster": "pnpm --filter @localloop/worker ingest:ticketmaster"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

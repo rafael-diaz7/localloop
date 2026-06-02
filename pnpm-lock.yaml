@@ -88,6 +88,9 @@ importers:
 
   apps/worker:
     dependencies:
+      "@localloop/db":
+        specifier: workspace:*
+        version: link:../../packages/db
       "@localloop/domain":
         specifier: workspace:*
         version: link:../../packages/domain
@@ -118,6 +121,9 @@ importers:
       "@localloop/domain":
         specifier: workspace:*
         version: link:../domain
+      zod:
+        specifier: ^3.25.56
+        version: 3.25.76
 
 packages:
   "@alloc/quick-lru@5.2.0":

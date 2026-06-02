@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "ingest:ticketmaster": "tsx src/ingest-ticketmaster.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run"
   },
   "dependencies": {
+    "@localloop/db": "workspace:*",
     "@localloop/domain": "workspace:*",
     "@localloop/providers": "workspace:*"
   },

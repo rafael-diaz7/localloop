@@ -1,0 +1,1 @@
+ALTER TABLE "venues" ALTER COLUMN "location" DROP NOT NULL;

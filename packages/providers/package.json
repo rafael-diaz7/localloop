@@ -16,7 +16,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@localloop/domain": "workspace:*"
+    "@localloop/domain": "workspace:*",
+    "zod": "^3.25.56"
   },
   "devDependencies": {}
 }
