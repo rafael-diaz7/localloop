@@ -324,10 +324,10 @@ export function buildTicketmasterDiscoveryUrl(
     now: Date;
   }
 ) {
-  const startDateTime = config.now.toISOString();
+  const startDateTime = formatTicketmasterDateTime(config.now);
   const endDateTime = new Date(
     config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000
-  ).toISOString();
+  );
   const url = new URL(TICKETMASTER_DISCOVERY_ENDPOINT);
 
   url.searchParams.set("apikey", config.apiKey);
@@ -336,7 +336,7 @@ export function buildTicketmasterDiscoveryUrl(
   url.searchParams.set("unit", "miles");
   url.searchParams.set("countryCode", "US");
   url.searchParams.set("startDateTime", startDateTime);
-  url.searchParams.set("endDateTime", endDateTime);
+  url.searchParams.set("endDateTime", formatTicketmasterDateTime(endDateTime));
   url.searchParams.set("includeTBA", "no");
   url.searchParams.set("includeTBD", "no");
   url.searchParams.set("includeTest", "no");
@@ -456,10 +456,10 @@ function ticketmasterRequestParameterSummary(config: NormalizedTicketmasterConfi
     radius: config.radiusMiles,
     unit: "miles",
     countryCode: "US",
-    startDateTime: config.now.toISOString(),
-    endDateTime: new Date(
-      config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000
-    ).toISOString(),
+    startDateTime: formatTicketmasterDateTime(config.now),
+    endDateTime: formatTicketmasterDateTime(
+      new Date(config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000)
+    ),
     includeTBA: "no",
     includeTBD: "no",
     includeTest: "no",
@@ -603,6 +603,10 @@ function positiveInteger(value: number | undefined, fallback: number) {
   }
 
   return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function formatTicketmasterDateTime(date: Date) {
+  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 function encodeGeohash(latitude: number, longitude: number, precision = 6) {

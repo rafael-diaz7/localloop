@@ -202,6 +202,8 @@ describe("Ticketmaster Discovery adapter", () => {
     expect(url.searchParams.get("radius")).toBe("25");
     expect(url.searchParams.get("unit")).toBe("miles");
     expect(url.searchParams.get("countryCode")).toBe("US");
+    expect(url.searchParams.get("startDateTime")).toBe("2026-06-02T12:00:00Z");
+    expect(url.searchParams.get("endDateTime")).toBe("2026-07-02T12:00:00Z");
     expect(url.searchParams.get("sort")).toBe("date,asc");
     expect(url.searchParams.get("page")).toBe("0");
   });
