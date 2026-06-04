@@ -5,7 +5,8 @@ DMV-area events by location, radius, date, category, and price.
 
 This repository currently contains the initial local development scaffold,
 seeded development event listings backed by PostgreSQL/PostGIS, and a first
-Ticketmaster Discovery API ingestion slice. Geocoding, radius search UI,
+Ticketmaster Discovery API ingestion slice. The `/events` page supports
+shareable URL-driven search over normalized events. Free-text geocoding,
 authentication, email digests, maps, and deployment are intentionally out of
 scope for this phase.
 
@@ -40,11 +41,49 @@ pnpm dev
 ```
 
 The web app runs at <http://localhost:3000>. Visit
-<http://localhost:3000/events> to view normalized local event listings.
+<http://localhost:3000/events?near=courthouse-arlington-va&radius=10&date=next-7-days&price=any&sort=soonest>
+to search normalized local event listings.
 
 The seeded listings are fictional sample data for local development only. They
 are safe to seed more than once and should not be treated as live real-world
 event listings.
+
+## Local Database And App Commands
+
+Start PostgreSQL/PostGIS and run migrations:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+pnpm db:migrate
+```
+
+Seed fictional DMV development records:
+
+```bash
+pnpm db:seed
+```
+
+Start the app:
+
+```bash
+pnpm dev
+```
+
+The `/events` page filters normalized database records by preset DMV location,
+radius, date window, included categories, excluded categories, price, and sort
+order. The selected filters are encoded in the URL, so opening or sharing the
+same URL reproduces the same search.
+
+Example:
+
+```text
+/events?near=courthouse-arlington-va&radius=10&date=next-7-days&price=any&sort=soonest
+```
+
+Current location choices are fixed DMV presets for MVP development:
+Courthouse, Clarendon, Dupont Circle, Old Town Alexandria, Downtown Bethesda,
+and Silver Spring. Free-text address search and geocoding are not implemented
+yet.
 
 ## Ticketmaster Discovery Ingestion
 
@@ -72,7 +111,8 @@ pnpm dev
 
 The importer reads `.env`, requires `DATABASE_URL` and `TICKETMASTER_API_KEY`,
 and never sends the API key to browser code. Imported events appear at
-<http://localhost:3000/events> alongside demo data.
+<http://localhost:3000/events?near=courthouse-arlington-va&radius=10&date=next-7-days&price=any&sort=soonest>
+alongside demo data when they match the selected search filters.
 
 The initial DMV import uses the Ticketmaster event search endpoint with:
 `geoPoint` for Washington, DC's center geohash, `radius=25`, `unit=miles`,

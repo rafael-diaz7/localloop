@@ -22,10 +22,10 @@ export default function HomePage() {
             Initial development foundation for an open-source DMV-area event discovery app.
           </p>
           <Link
-            href="/events"
+            href="/events?near=courthouse-arlington-va&radius=10&date=next-7-days&price=any&sort=soonest"
             className="mt-8 inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink"
           >
-            View sample events
+            Search events
           </Link>
         </div>
 

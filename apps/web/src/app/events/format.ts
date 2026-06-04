@@ -54,6 +54,14 @@ export function formatEventPrice(
   return `${formatMoney(min, event.currency)}-${formatMoney(max, event.currency)}`;
 }
 
+export function formatDistanceMiles(distanceMiles: number) {
+  if (distanceMiles >= 10) {
+    return `${Math.round(distanceMiles)} mi away`;
+  }
+
+  return `${distanceMiles.toFixed(1)} mi away`;
+}
+
 function formatMoney(cents: number, currency: string | null) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

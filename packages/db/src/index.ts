@@ -5,7 +5,13 @@ export {
   type DbClient,
   type DbConnection
 } from "./client";
-export { listUpcomingEvents, type UpcomingEvent } from "./events";
+export {
+  listUpcomingEvents,
+  searchEvents,
+  type SearchableEvent,
+  type SearchEventsInput,
+  type UpcomingEvent
+} from "./events";
 export {
   ensureSource,
   importProviderEventBatch,

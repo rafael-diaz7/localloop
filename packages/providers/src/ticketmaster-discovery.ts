@@ -325,9 +325,7 @@ export function buildTicketmasterDiscoveryUrl(
   }
 ) {
   const startDateTime = formatTicketmasterDateTime(config.now);
-  const endDateTime = new Date(
-    config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000
-  );
+  const endDateTime = new Date(config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000);
   const url = new URL(TICKETMASTER_DISCOVERY_ENDPOINT);
 
   url.searchParams.set("apikey", config.apiKey);

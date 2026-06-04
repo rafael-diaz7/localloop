@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCategory, formatEventPrice } from "./format";
+import { formatCategory, formatDistanceMiles, formatEventPrice } from "./format";
 
 describe("event card formatting", () => {
   it("formats event prices", () => {
@@ -35,5 +35,11 @@ describe("event card formatting", () => {
   it("formats category labels", () => {
     expect(formatCategory("food-drink")).toBe("Food and Drink");
     expect(formatCategory("custom")).toBe("custom");
+  });
+
+  it("formats distances", () => {
+    expect(formatDistanceMiles(0.74)).toBe("0.7 mi away");
+    expect(formatDistanceMiles(4.34)).toBe("4.3 mi away");
+    expect(formatDistanceMiles(12.2)).toBe("12 mi away");
   });
 });
