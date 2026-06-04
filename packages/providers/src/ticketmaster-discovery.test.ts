@@ -8,6 +8,8 @@ import {
 } from "./ticketmaster-discovery.fixtures";
 import {
   buildTicketmasterDiscoveryUrl,
+  fetchTicketmasterDiscoveryEvents,
+  getTicketmasterEventSkipReason,
   mapTicketmasterClassifications,
   normalizeTicketmasterEvent,
   parseTicketmasterDiscoveryResponse,
@@ -113,6 +115,71 @@ describe("Ticketmaster Discovery adapter", () => {
     const event = parsed._embedded?.events?.[0];
 
     expect(normalizeTicketmasterEvent(event!)?.externalId).toBe("tm-typical-1");
+  });
+
+  it("tracks events skipped because they are missing a concrete start date/time", async () => {
+    const parsed = parseTicketmasterDiscoveryResponse(typicalTicketmasterResponse);
+    const validEvent = parsed._embedded?.events?.[0];
+
+    expect(validEvent).toBeDefined();
+
+    if (!validEvent) {
+      throw new Error("Expected a valid Ticketmaster fixture event");
+    }
+
+    const missingDateTimeEvent = structuredClone(validEvent);
+
+    if (!missingDateTimeEvent.dates.start) {
+      throw new Error("Expected a valid Ticketmaster fixture event start");
+    }
+
+    delete missingDateTimeEvent.dates.start.dateTime;
+    missingDateTimeEvent.id = "tm-missing-concrete-start-1";
+    missingDateTimeEvent.name = "Sanitized Event Missing Concrete Start";
+
+    expect(
+      getTicketmasterEventSkipReason(
+        parseTicketmasterDiscoveryResponse({ _embedded: { events: [missingDateTimeEvent] } })
+          ._embedded!.events![0]!
+      )
+    ).toMatchObject({
+      key: "missingConcreteStartDateTime",
+      label: "Missing concrete start date/time"
+    });
+
+    const batch = await fetchTicketmasterDiscoveryEvents({
+      apiKey: "test-key",
+      maxPages: 1,
+      now: new Date("2026-06-02T12:00:00Z"),
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          _embedded: {
+            events: [validEvent, missingDateTimeEvent]
+          },
+          page: {
+            size: 100,
+            totalElements: 2,
+            totalPages: 1,
+            number: 0
+          }
+        })
+      })
+    });
+
+    expect(batch.fetchedCount).toBe(2);
+    expect(batch.events).toHaveLength(1);
+    expect(batch.events[0]?.externalId).toBe("tm-typical-1");
+    expect(batch.skippedCount).toBe(1);
+    expect(batch.skippedReasons).toEqual([
+      {
+        key: "missingConcreteStartDateTime",
+        label: "Missing concrete start date/time",
+        count: 1
+      }
+    ]);
   });
 
   it("throws a useful error when the API key is missing", () => {

@@ -2,6 +2,7 @@ export type {
   EventProvider,
   NormalizedEvent,
   NormalizedEventBatch,
+  NormalizedEventSkipReason,
   NormalizedVenue,
   ProviderEvent,
   ProviderSourceIdentity
@@ -9,6 +10,7 @@ export type {
 export {
   buildTicketmasterDiscoveryUrl,
   fetchTicketmasterDiscoveryEvents,
+  getTicketmasterEventSkipReason,
   mapTicketmasterClassifications,
   normalizeTicketmasterEvent,
   parseTicketmasterDiscoveryResponse,

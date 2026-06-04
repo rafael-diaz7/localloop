@@ -51,11 +51,18 @@ export type NormalizedEvent = {
   };
 };
 
+export type NormalizedEventSkipReason = {
+  key: string;
+  label: string;
+  count: number;
+};
+
 export type NormalizedEventBatch = {
   source: ProviderSourceIdentity;
   events: NormalizedEvent[];
   fetchedCount: number;
   skippedCount: number;
+  skippedReasons?: NormalizedEventSkipReason[];
   metadata?: Record<string, unknown>;
 };
 

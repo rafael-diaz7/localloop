@@ -5,6 +5,7 @@ import { z } from "zod";
 import type {
   NormalizedEvent,
   NormalizedEventBatch,
+  NormalizedEventSkipReason,
   ProviderSourceIdentity
 } from "./event-provider";
 
@@ -19,6 +20,10 @@ const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_MAX_PAGES = 5;
 const DEFAULT_TIMEZONE = "America/New_York";
 const GEOSHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+const MISSING_CONCRETE_START_DATE_TIME_SKIP_REASON = {
+  key: "missingConcreteStartDateTime",
+  label: "Missing concrete start date/time"
+};
 
 export const ticketmasterDiscoverySource = {
   key: "ticketmaster-discovery",
@@ -261,6 +266,16 @@ export function normalizeTicketmasterEvent(
   };
 }
 
+export function getTicketmasterEventSkipReason(
+  event: TicketmasterDiscoveryEvent
+): Omit<NormalizedEventSkipReason, "count"> | undefined {
+  if (!event.dates.start?.dateTime) {
+    return MISSING_CONCRETE_START_DATE_TIME_SKIP_REASON;
+  }
+
+  return undefined;
+}
+
 export function mapTicketmasterClassifications(
   classifications: TicketmasterDiscoveryEvent["classifications"] = []
 ): EventCategory[] {
@@ -339,6 +354,7 @@ export async function fetchTicketmasterDiscoveryEvents(
   const normalizedConfig = normalizeConfig(config);
   const fetchImpl = config.fetchImpl ?? fetch;
   const eventsByExternalId = new Map<string, NormalizedEvent>();
+  const skippedReasons = new Map<string, NormalizedEventSkipReason>();
   let fetchedCount = 0;
   let skippedCount = 0;
 
@@ -360,6 +376,14 @@ export async function fetchTicketmasterDiscoveryEvents(
     fetchedCount += pageEvents.length;
 
     for (const event of pageEvents) {
+      const skipReason = getTicketmasterEventSkipReason(event);
+
+      if (skipReason) {
+        skippedCount += 1;
+        incrementSkipReason(skippedReasons, skipReason);
+        continue;
+      }
+
       const normalizedEvent = normalizeTicketmasterEvent(event, normalizedConfig.now);
 
       if (!normalizedEvent) {
@@ -383,6 +407,7 @@ export async function fetchTicketmasterDiscoveryEvents(
     events: [...eventsByExternalId.values()],
     fetchedCount,
     skippedCount,
+    skippedReasons: [...skippedReasons.values()],
     metadata: {
       radiusMiles: normalizedConfig.radiusMiles,
       centerLatitude: normalizedConfig.centerLatitude,
@@ -390,9 +415,22 @@ export async function fetchTicketmasterDiscoveryEvents(
       timeWindowDays: normalizedConfig.timeWindowDays,
       maxPages: normalizedConfig.maxPages,
       pageSize: normalizedConfig.pageSize,
+      skippedReasons: [...skippedReasons.values()],
       requestParameters: ticketmasterRequestParameterSummary(normalizedConfig)
     }
   };
+}
+
+function incrementSkipReason(
+  skippedReasons: Map<string, NormalizedEventSkipReason>,
+  reason: Omit<NormalizedEventSkipReason, "count">
+) {
+  const existingReason = skippedReasons.get(reason.key);
+
+  skippedReasons.set(reason.key, {
+    ...reason,
+    count: (existingReason?.count ?? 0) + 1
+  });
 }
 
 export function payloadHash(payload: Record<string, unknown>) {

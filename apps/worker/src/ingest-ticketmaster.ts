@@ -14,6 +14,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { formatTicketmasterIngestionSummary } from "./ticketmaster-ingestion-summary";
+
 const DEFAULT_RADIUS_MILES = 25;
 const DEFAULT_TIME_WINDOW_DAYS = 30;
 const DEFAULT_MAX_PAGES = 5;
@@ -51,8 +53,12 @@ export async function ingestTicketmaster() {
     const result = await importProviderEventBatch(connection.db, batch, runId);
 
     console.log(
-      `Imported ${result.importedCount} Ticketmaster events ` +
-        `(${batch.fetchedCount} fetched, ${result.skippedCount} skipped).`
+      formatTicketmasterIngestionSummary({
+        fetchedCount: batch.fetchedCount,
+        importedCount: result.importedCount,
+        skippedCount: result.skippedCount,
+        skippedReasons: batch.skippedReasons
+      })
     );
 
     return result;
