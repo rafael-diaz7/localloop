@@ -15,6 +15,8 @@
     "test": "pnpm -r test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "deploy:homelab": "scripts/deploy-homelab.sh",
+    "restart:homelab-web": "scripts/restart-homelab-web.sh",
     "db:generate": "pnpm --filter @localloop/db db:generate",
     "db:migrate": "pnpm --filter @localloop/db db:migrate",
     "db:seed": "pnpm --filter @localloop/db db:seed",

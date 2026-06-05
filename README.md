@@ -196,6 +196,71 @@ sudo systemctl status localloop-ticketmaster-ingest.service --no-pager
 journalctl -u localloop-ticketmaster-ingest.service -n 100 --no-pager
 ```
 
+## Homelab Web Service
+
+The homelab web service is for private LAN/Tailscale development serving only.
+It does not configure public HTTPS, a reverse proxy, or internet exposure.
+
+LocalLoop includes a repository-managed systemd unit:
+
+```text
+infra/systemd/localloop-web.service
+```
+
+The service runs as user `goose`, uses
+`/home/goose/projects/localloop/apps/web` as its working directory, loads
+`/home/goose/projects/localloop/.env`, sets `NODE_ENV=production`, and starts
+Next.js on all interfaces at port 3000.
+
+Install or refresh the unit with a symlink:
+
+```bash
+sudo ln -sf /home/goose/projects/localloop/infra/systemd/localloop-web.service /etc/systemd/system/localloop-web.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now localloop-web.service
+```
+
+Manage the service:
+
+```bash
+sudo systemctl start localloop-web.service
+sudo systemctl stop localloop-web.service
+sudo systemctl restart localloop-web.service
+sudo systemctl status localloop-web.service --no-pager
+journalctl -u localloop-web.service -n 100 --no-pager
+```
+
+After installing the service, access the app privately over LAN or Tailscale:
+
+```text
+http://tavo:3000
+http://<tailscale-ip>:3000
+```
+
+Deploy or update the homelab web service from the repo root:
+
+```bash
+pnpm deploy:homelab
+```
+
+The deploy command refuses to run with uncommitted changes, pulls the current
+branch with `git pull --ff-only`, installs dependencies, loads `.env` without
+printing values, runs `pnpm db:migrate`, builds the workspace, restarts
+`localloop-web.service`, and checks
+`http://127.0.0.1:3000/api/health`. It may prompt for sudo when restarting the
+systemd service.
+
+To test local changes already present on `tavo` without pulling or requiring a
+clean working tree:
+
+```bash
+pnpm restart:homelab-web
+```
+
+This builds the current checkout, restarts `localloop-web.service`, and checks
+`http://127.0.0.1:3000/api/health`. It does not install dependencies, pull
+commits, or run migrations.
+
 ## Workspace Layout
 
 ```text
@@ -217,6 +282,10 @@ pnpm typecheck     Type-check all workspaces
 pnpm lint          Run ESLint
 pnpm test          Run Vitest across workspaces
 pnpm format:check  Check Prettier formatting
+pnpm deploy:homelab
+                   Pull, install, migrate, build, restart, and health check
+pnpm restart:homelab-web
+                   Build current checkout, restart web service, and health check
 pnpm db:migrate    Run Drizzle migrations
 pnpm db:seed       Seed fictional local development events
 pnpm ingest:ticketmaster

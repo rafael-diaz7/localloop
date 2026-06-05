@@ -1,0 +1,19 @@
+[Unit]
+Description=LocalLoop Next.js web app
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+User=goose
+Group=goose
+WorkingDirectory=/home/goose/projects/localloop/apps/web
+EnvironmentFile=/home/goose/projects/localloop/.env
+Environment=NODE_ENV=production
+Environment=PATH=/home/goose/.nvm/versions/node/v24.16.0/bin:/home/goose/projects/localloop/apps/web/node_modules/.bin:/home/goose/projects/localloop/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/goose/projects/localloop/apps/web/node_modules/.bin/next start --hostname 0.0.0.0 --port 3000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
