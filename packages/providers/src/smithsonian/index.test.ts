@@ -51,7 +51,9 @@ describe("Smithsonian Trumba Atom adapter", () => {
         name: "National Museum of American History",
         displayAddress: "1300 Constitution Ave NW, Washington, DC 20560",
         locality: "Washington",
-        region: "DC"
+        region: "DC",
+        latitude: 38.8913,
+        longitude: -77.03
       },
       providerMetadata: {
         sponsor: "Smithsonian Institution",
@@ -84,6 +86,55 @@ describe("Smithsonian Trumba Atom adapter", () => {
     expect(mapSmithsonianPriceStatus("Tickets required. Price: $25")).toBe("paid");
     expect(mapSmithsonianPriceStatus("Registration required")).toBe("paid");
     expect(mapSmithsonianPriceStatus(undefined)).toBe("unknown");
+  });
+
+  it("cleans HTML text fields and ignores URL-only venue values", () => {
+    const [entry] = parseSmithsonianFeed(`
+      <feed>
+        <entry>
+          <id>http://uid.trumba.com/event/203523610</id>
+          <title>Online Workshop</title>
+          <link rel="alternate" href="https://www.si.edu/events/online-workshop-fixture" />
+          <gd:when startTime="2026-07-23T10:30:00-04:00" />
+          <gc:venue>https://smithsonianassociates.org/ticketing/programs/workshop</gc:venue>
+          <gc:categories>Workshops</gc:categories>
+          <gc:cost>&lt;a href="https://smithsonianassociates.org/ticketing/programs/workshop"&gt;View registration&amp;nbsp;price&lt;/a&gt;</gc:cost>
+          <gc:getticketsregister>&lt;a href="https://smithsonianassociates.org/ticketing/programs/workshop"&gt;Register&lt;/a&gt;</gc:getticketsregister>
+        </entry>
+      </feed>
+    `);
+
+    expect(entry).toMatchObject({
+      venue: undefined,
+      cost: "View registration price",
+      registrationUrl: "https://smithsonianassociates.org/ticketing/programs/workshop"
+    });
+    expect(mapSmithsonianPriceStatus(entry?.cost)).toBe("paid");
+  });
+
+  it("infers coordinates and display location from known venue names", () => {
+    const [entry] = parseSmithsonianFeed(`
+      <feed>
+        <entry>
+          <id>http://uid.trumba.com/event/203523611</id>
+          <title>Spark!Lab</title>
+          <link rel="alternate" href="https://www.si.edu/events/sparklab-fixture" />
+          <gd:when startTime="2026-07-24T10:00:00-04:00" />
+          <gc:venue>American History Museum</gc:venue>
+          <gc:categories>Kids &amp; Families</gc:categories>
+          <gc:cost>Free</gc:cost>
+        </entry>
+      </feed>
+    `);
+    const normalized = normalizeSmithsonianEvent(entry!, new Date("2026-06-05T12:00:00Z"));
+
+    expect(normalized?.venue).toMatchObject({
+      name: "American History Museum",
+      locality: "Washington",
+      region: "DC",
+      latitude: 38.8913,
+      longitude: -77.03
+    });
   });
 
   it("filters out events without a clear DMV location signal", () => {

@@ -49,6 +49,95 @@ const KNOWN_DMV_VENUES = [
   "steven f. udvar-hazy center",
   "udvar-hazy center"
 ];
+const KNOWN_DMV_VENUE_COORDINATES = [
+  {
+    names: [
+      "african american history and culture museum",
+      "national museum of african american history and culture"
+    ],
+    latitude: 38.8911,
+    longitude: -77.032
+  },
+  {
+    names: [
+      "african art museum",
+      "arts and industries building",
+      "national museum of african art",
+      "s. dillon ripley center",
+      "smithsonian arts and industries building",
+      "smithsonian castle",
+      "smithsonian gardens"
+    ],
+    latitude: 38.8888,
+    longitude: -77.026
+  },
+  {
+    names: ["air and space museum", "national air and space museum"],
+    latitude: 38.8882,
+    longitude: -77.0199
+  },
+  {
+    names: [
+      "american art museum",
+      "national portrait gallery",
+      "portrait gallery",
+      "renwick gallery"
+    ],
+    latitude: 38.8979,
+    longitude: -77.023
+  },
+  {
+    names: ["american history museum", "national museum of american history"],
+    latitude: 38.8913,
+    longitude: -77.03
+  },
+  {
+    names: [
+      "american indian museum",
+      "national museum of the american indian"
+    ],
+    latitude: 38.8881,
+    longitude: -77.0166
+  },
+  {
+    names: ["anacostia community museum"],
+    latitude: 38.8563,
+    longitude: -76.977
+  },
+  {
+    names: ["asian art museum"],
+    latitude: 38.8884,
+    longitude: -77.0275
+  },
+  {
+    names: ["hirshhorn museum"],
+    latitude: 38.8882,
+    longitude: -77.023
+  },
+  {
+    names: [
+      "natural history museum",
+      "national museum of natural history"
+    ],
+    latitude: 38.8913,
+    longitude: -77.0261
+  },
+  {
+    names: ["national zoo"],
+    latitude: 38.9296,
+    longitude: -77.0498
+  },
+  {
+    names: ["postal museum", "national postal museum"],
+    latitude: 38.8981,
+    longitude: -77.0091
+  },
+  {
+    names: ["steven f. udvar-hazy center", "udvar-hazy center"],
+    latitude: 38.9109,
+    longitude: -77.4442
+  }
+];
 
 export const smithsonianSource = {
   key: "smithsonian",
@@ -191,6 +280,8 @@ export function normalizeSmithsonianEvent(
   const where = trimToUndefined(entry.where);
   const venueName = trimToUndefined(entry.venue) ?? where ?? eventLocation ?? "Unknown venue";
   const categories = mapSmithsonianCategories(entry.categories);
+  const locationText = [venueName, eventLocation, where].filter(Boolean).join(" ");
+  const coordinates = inferCoordinates(locationText);
 
   return {
     externalId,
@@ -204,8 +295,10 @@ export function normalizeSmithsonianEvent(
       externalId: stableVenueExternalId(venueName, eventLocation ?? where),
       name: venueName,
       displayAddress: eventLocation ?? where,
-      locality: inferLocality(eventLocation ?? where ?? venueName),
-      region: inferRegion(eventLocation ?? where ?? venueName)
+      locality: inferLocality(locationText),
+      region: inferRegion(locationText),
+      latitude: coordinates?.latitude,
+      longitude: coordinates?.longitude
     },
     categories,
     priceStatus: mapSmithsonianPriceStatus(cost),
@@ -358,24 +451,26 @@ function parseSmithsonianEntry(rawXml: string): SmithsonianFeedEntry {
     elementText(rawXml, "eventimage") ?? elementAttribute(rawXml, "eventimage", "href");
   const detailImage =
     elementText(rawXml, "detailimage") ?? elementAttribute(rawXml, "detailimage", "href");
+  const registrationText = elementText(rawXml, "getticketsregister");
 
   return {
     id: elementText(rawXml, "id"),
-    title: elementText(rawXml, "title"),
+    title: textField(elementText(rawXml, "title")),
     content: stripHtml(elementText(rawXml, "content")),
     notes: stripHtml(elementText(rawXml, "notes")),
     startTime: elementAttribute(rawXml, "when", "startTime"),
     endTime: elementAttribute(rawXml, "when", "endTime"),
-    venue: elementText(rawXml, "venue"),
-    where: elementText(rawXml, "where") ?? elementAttribute(rawXml, "where", "valueString"),
-    eventLocation: elementText(rawXml, "eventlocation"),
+    venue: venueField(elementText(rawXml, "venue")),
+    where: venueField(elementText(rawXml, "where") ?? elementAttribute(rawXml, "where", "valueString")),
+    eventLocation: venueField(elementText(rawXml, "eventlocation")),
     categories: splitCategories(elementText(rawXml, "categories")),
-    cost: elementText(rawXml, "cost"),
-    sponsor: elementText(rawXml, "sponsor"),
+    cost: textField(elementText(rawXml, "cost")),
+    sponsor: textField(elementText(rawXml, "sponsor")),
     sourceUrl: alternateLink(rawXml),
-    registrationUrl: elementText(rawXml, "getticketsregister"),
+    registrationUrl:
+      urlField(registrationText) ?? elementAttribute(rawXml, "getticketsregister", "href"),
     imageUrl: trimToUndefined(eventImage) ?? trimToUndefined(detailImage),
-    accessibility: elementText(rawXml, "accessibility"),
+    accessibility: textField(elementText(rawXml, "accessibility")),
     rawXml
   };
 }
@@ -481,11 +576,19 @@ function stripHtml(value?: string) {
 
 function decodeXml(value: string) {
   return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, codepoint: string) =>
+      String.fromCodePoint(Number.parseInt(codepoint, 16))
+    )
+    .replace(/&#(\d+);/g, (_, codepoint: string) =>
+      String.fromCodePoint(Number.parseInt(codepoint, 10))
+    )
+    .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ");
 }
 
 function parseDate(value?: string) {
@@ -567,6 +670,14 @@ function inferRegion(locationText: string) {
   return undefined;
 }
 
+function inferCoordinates(locationText: string) {
+  const normalized = normalizeWhitespace(locationText).toLowerCase();
+
+  return KNOWN_DMV_VENUE_COORDINATES.find((venue) =>
+    venue.names.some((name) => normalized.includes(name))
+  );
+}
+
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -575,6 +686,27 @@ function trimToUndefined(value?: string) {
   const trimmed = value?.trim();
 
   return trimmed ? trimmed : undefined;
+}
+
+function textField(value?: string) {
+  return stripHtml(value);
+}
+
+function venueField(value?: string) {
+  const text = textField(value);
+
+  return text && /^https?:\/\//i.test(text) ? undefined : text;
+}
+
+function urlField(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const href = value.match(/\bhref\s*=\s*("([^"]*)"|'([^']*)')/i);
+  const rawUrl = href?.[2] ?? href?.[3] ?? value;
+
+  return trimToUndefined(stripHtml(decodeXml(rawUrl)));
 }
 
 function incrementSkipReason(
