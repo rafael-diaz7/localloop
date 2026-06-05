@@ -1,4 +1,9 @@
-import { eventCategories, eventPriceStatuses, eventStatuses } from "@localloop/domain";
+import {
+  eventCategories,
+  eventGroupDecisions,
+  eventPriceStatuses,
+  eventStatuses
+} from "@localloop/domain";
 import {
   customType,
   index,
@@ -20,6 +25,7 @@ const geographyPoint = customType<{ data: string; driverData: string }>({
 });
 
 export const eventCategoryEnum = pgEnum("event_category", eventCategories);
+export const eventGroupDecisionEnum = pgEnum("event_group_decision", eventGroupDecisions);
 export const eventPriceStatusEnum = pgEnum("event_price_status", eventPriceStatuses);
 export const eventStatusEnum = pgEnum("event_status", eventStatuses);
 export const ingestionRunStatusEnum = pgEnum("ingestion_run_status", [
@@ -109,6 +115,46 @@ export const eventCategoriesTable = pgTable(
   })
 );
 
+export const eventGroups = pgTable(
+  "event_groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    canonicalEventId: uuid("canonical_event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    canonicalEventIdx: index("event_groups_canonical_event_id_idx").on(table.canonicalEventId)
+  })
+);
+
+export const eventGroupMembers = pgTable(
+  "event_group_members",
+  {
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => eventGroups.id, { onDelete: "cascade" }),
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    score: integer("score").notNull(),
+    reasons: jsonb("reasons").$type<Record<string, unknown>>().notNull(),
+    decision: eventGroupDecisionEnum("decision").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.groupId, table.eventId] }),
+    eventDecisionIdx: index("event_group_members_event_decision_idx").on(
+      table.eventId,
+      table.decision
+    ),
+    decisionIdx: index("event_group_members_decision_idx").on(table.decision)
+  })
+);
+
 export const ingestionRuns = pgTable(
   "ingestion_runs",
   {
@@ -153,6 +199,10 @@ export type EventRow = typeof events.$inferSelect;
 export type NewEventRow = typeof events.$inferInsert;
 export type EventCategoryRow = typeof eventCategoriesTable.$inferSelect;
 export type NewEventCategoryRow = typeof eventCategoriesTable.$inferInsert;
+export type EventGroupRow = typeof eventGroups.$inferSelect;
+export type NewEventGroupRow = typeof eventGroups.$inferInsert;
+export type EventGroupMemberRow = typeof eventGroupMembers.$inferSelect;
+export type NewEventGroupMemberRow = typeof eventGroupMembers.$inferInsert;
 export type SourceRow = typeof sources.$inferSelect;
 export type NewSourceRow = typeof sources.$inferInsert;
 export type IngestionRunRow = typeof ingestionRuns.$inferSelect;

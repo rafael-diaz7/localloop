@@ -1,5 +1,20 @@
 export { eventCategories, eventCategorySchema, type EventCategory } from "./categories";
 export {
+  chooseCanonicalEvent,
+  defaultCanonicalSourcePriority,
+  eventGroupDecisions,
+  eventTitleSimilarity,
+  isLikelyAddonEvent,
+  normalizeEventTitle,
+  scoreDuplicateCandidate,
+  timeSimilarity,
+  venueSimilarity,
+  type DuplicateComparisonEvent,
+  type DuplicateScore,
+  type CanonicalEventCandidate,
+  type EventGroupDecision
+} from "./event-deduplication";
+export {
   allEventSearchCategories,
   dmvTimeZone,
   eventCategorySetMatchesFilters,

@@ -12,6 +12,7 @@ export {
   type SearchEventsInput,
   type UpcomingEvent
 } from "./events";
+export { recomputeEventDeduplication, type DeduplicationSummary } from "./event-deduplication";
 export {
   ensureSource,
   expirePastProviderEvents,

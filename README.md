@@ -6,7 +6,8 @@ DMV-area events by location, radius, date, category, and price.
 This repository currently contains the initial local development scaffold,
 seeded development event listings backed by PostgreSQL/PostGIS, a Ticketmaster
 Discovery API ingestion slice, and a Smithsonian events feed ingestion slice.
-The `/events` page supports shareable URL-driven search over normalized events.
+The `/events` page supports shareable URL-driven search over normalized events
+and displays one canonical card for likely duplicate provider listings.
 Free-text geocoding, authentication, email digests, maps, and deployment are
 intentionally out of scope for this phase.
 
@@ -109,6 +110,7 @@ docker compose -f infra/docker-compose.yml up -d
 pnpm db:migrate
 pnpm db:seed
 pnpm ingest:ticketmaster
+pnpm dedupe:events
 pnpm dev
 ```
 
@@ -183,6 +185,7 @@ Import Smithsonian events:
 docker compose -f infra/docker-compose.yml up -d
 pnpm db:migrate
 pnpm ingest:smithsonian
+pnpm dedupe:events
 pnpm dev
 ```
 
@@ -207,6 +210,26 @@ ambiguous or non-DMV locations such as Juneau, Alaska are skipped.
 Imported Smithsonian listings should preserve Smithsonian attribution. A twice
 daily refresh cadence is appropriate for the current ingestion design, matching
 the existing Ticketmaster schedule shape.
+
+## Event Deduplication
+
+Provider ingestion keeps source events intact. Run dedupe after importing
+providers to group likely duplicate listings for public display:
+
+```bash
+pnpm ingest:ticketmaster
+pnpm ingest:smithsonian
+pnpm dedupe:events
+```
+
+The dedupe command writes `event_groups` and `event_group_members`, chooses one
+canonical event per confident group, and hides obvious standalone add-ons such
+as parking, VIP packages, premium packages, lounge access, fast lane, and
+upgrades from default `/events` results. It does not delete provider rows or raw
+payloads.
+
+See [docs/DEDUPLICATION.md](docs/DEDUPLICATION.md) for scoring rules,
+thresholds, add-on behavior, and known limitations.
 
 ## Scheduled Ticketmaster Ingestion
 
@@ -342,6 +365,10 @@ pnpm db:migrate    Run Drizzle migrations
 pnpm db:seed       Seed fictional local development events
 pnpm ingest:ticketmaster
                    Import bounded upcoming DMV events from Ticketmaster
+pnpm ingest:smithsonian
+                   Import upcoming DMV Smithsonian feed events
+pnpm dedupe:events
+                   Recompute canonical event groups for public display
 pnpm ingestion:status
                    Print recent ingestion run status and lifecycle counts
 ```

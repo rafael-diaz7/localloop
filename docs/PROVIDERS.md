@@ -59,6 +59,20 @@ daily refresh cadence is appropriate for parity with the initial Ticketmaster
 timer; a future scheduler can add a dedicated Smithsonian timer using
 `pnpm ingest:smithsonian`.
 
+After provider ingestion, run event deduplication as a separate post-processing
+step:
+
+```bash
+pnpm ingest:ticketmaster
+pnpm ingest:smithsonian
+pnpm dedupe:events
+```
+
+The dedupe step writes canonical grouping records for public display and hides
+obvious standalone add-ons such as Ticketmaster parking, VIP packages, premium
+packages, lounge access, fast lane, and upgrades. It does not delete provider
+events or `raw_source_events` rows. See [DEDUPLICATION.md](DEDUPLICATION.md).
+
 ## DMV Import Parameters
 
 The first import covers a bounded upcoming DMV-area slice using a geographic
