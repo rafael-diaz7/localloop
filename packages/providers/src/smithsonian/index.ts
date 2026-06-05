@@ -92,10 +92,7 @@ const KNOWN_DMV_VENUE_COORDINATES = [
     longitude: -77.03
   },
   {
-    names: [
-      "american indian museum",
-      "national museum of the american indian"
-    ],
+    names: ["american indian museum", "national museum of the american indian"],
     latitude: 38.8881,
     longitude: -77.0166
   },
@@ -115,10 +112,7 @@ const KNOWN_DMV_VENUE_COORDINATES = [
     longitude: -77.023
   },
   {
-    names: [
-      "natural history museum",
-      "national museum of natural history"
-    ],
+    names: ["natural history museum", "national museum of natural history"],
     latitude: 38.8913,
     longitude: -77.0261
   },
@@ -461,7 +455,9 @@ function parseSmithsonianEntry(rawXml: string): SmithsonianFeedEntry {
     startTime: elementAttribute(rawXml, "when", "startTime"),
     endTime: elementAttribute(rawXml, "when", "endTime"),
     venue: venueField(elementText(rawXml, "venue")),
-    where: venueField(elementText(rawXml, "where") ?? elementAttribute(rawXml, "where", "valueString")),
+    where: venueField(
+      elementText(rawXml, "where") ?? elementAttribute(rawXml, "where", "valueString")
+    ),
     eventLocation: venueField(elementText(rawXml, "eventlocation")),
     categories: splitCategories(elementText(rawXml, "categories")),
     cost: textField(elementText(rawXml, "cost")),
