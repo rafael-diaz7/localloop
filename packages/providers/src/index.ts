@@ -24,3 +24,22 @@ export type {
   TicketmasterDiscoveryResponse,
   TicketmasterFetch
 } from "./ticketmaster-discovery";
+export {
+  buildSmithsonianEventBatch,
+  fetchSmithsonianEvents,
+  isLikelyDmvSmithsonianEvent,
+  mapSmithsonianCategories,
+  mapSmithsonianPriceStatus,
+  normalizeSmithsonianEvent,
+  normalizeSmithsonianProbeEvents,
+  parseSmithsonianFeed,
+  SMITHSONIAN_EVENTS_FEED_URL,
+  smithsonianSource,
+  summarizeSmithsonianProbeEvents
+} from "./smithsonian";
+export type {
+  SmithsonianFeedEntry,
+  SmithsonianFetch,
+  SmithsonianProbeEvent,
+  SmithsonianProbeSummary
+} from "./smithsonian";

@@ -4,11 +4,11 @@ LocalLoop is an open-source local event discovery web app for finding upcoming
 DMV-area events by location, radius, date, category, and price.
 
 This repository currently contains the initial local development scaffold,
-seeded development event listings backed by PostgreSQL/PostGIS, and a first
-Ticketmaster Discovery API ingestion slice. The `/events` page supports
-shareable URL-driven search over normalized events. Free-text geocoding,
-authentication, email digests, maps, and deployment are intentionally out of
-scope for this phase.
+seeded development event listings backed by PostgreSQL/PostGIS, a Ticketmaster
+Discovery API ingestion slice, and a Smithsonian events feed ingestion slice.
+The `/events` page supports shareable URL-driven search over normalized events.
+Free-text geocoding, authentication, email digests, maps, and deployment are
+intentionally out of scope for this phase.
 
 ## Stack
 
@@ -155,6 +155,58 @@ Provider usage must follow Ticketmaster's current API terms, including terms
 around Event Content storage, removal requests, and monetization. This
 repository documents the implemented technical behavior but does not automate
 legal compliance.
+
+## Smithsonian Events Ingestion
+
+LocalLoop also imports structured Smithsonian Institution events from the Trumba
+Atom feed:
+
+```text
+https://www.trumba.com/calendars/smithsonian-events.xml
+```
+
+No API key is required. The adapter uses Atom/Trumba fields directly and does
+not scrape HTML event pages.
+
+Validate parsing without touching the database:
+
+```bash
+pnpm provider:probe:smithsonian
+```
+
+The probe prints the first 100 normalized feed entries and summary statistics
+for categories, venues, and price status.
+
+Import Smithsonian events:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+pnpm db:migrate
+pnpm ingest:smithsonian
+pnpm dev
+```
+
+The importer requires `DATABASE_URL`, registers source key `smithsonian`, and
+uses the feed UID such as `http://uid.trumba.com/event/203523606` as
+`external_id`. Provider deduplication continues to use `(source, external_id)`.
+
+Smithsonian categories map into LocalLoop's current category set:
+Gallery Talks & Tours, Performances, and After Five map to `arts-culture`; Kids
+& Families maps to `family`; Workshops maps to `education`; Culinary Arts maps
+to `food-drink`; unknown labels map to `other`.
+
+Cost text containing `free` maps to `free`; text containing `price`, `ticket`,
+`$`, or `registration` maps to `paid`; all other cost text maps to `unknown`.
+The raw cost text is kept in provider metadata.
+
+The Smithsonian feed can include nationwide Smithsonian-affiliated events, so
+the provider applies a positive DMV filter. Only events whose venue/location
+text clearly indicates District of Columbia, Maryland, or Virginia are imported;
+ambiguous or non-DMV locations such as Juneau, Alaska are skipped.
+
+Imported Smithsonian listings should preserve Smithsonian attribution. A twice
+daily refresh cadence is appropriate for the current ingestion design, matching
+the existing Ticketmaster schedule shape.
 
 ## Scheduled Ticketmaster Ingestion
 

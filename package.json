@@ -21,7 +21,9 @@
     "db:migrate": "pnpm --filter @localloop/db db:migrate",
     "db:seed": "pnpm --filter @localloop/db db:seed",
     "db:studio": "pnpm --filter @localloop/db db:studio",
+    "provider:probe:smithsonian": "pnpm --filter @localloop/providers provider:probe:smithsonian",
     "ingest:ticketmaster": "pnpm --filter @localloop/worker ingest:ticketmaster",
+    "ingest:smithsonian": "pnpm --filter @localloop/worker ingest:smithsonian",
     "ingestion:status": "pnpm --filter @localloop/worker ingestion:status"
   },
   "devDependencies": {

@@ -303,7 +303,7 @@ export async function importProviderEventBatch(
             ...lifecycleCounts,
             removalReconciliation: "deferred",
             removalReconciliationReason:
-              "Bounded Ticketmaster search results do not prove absent provider events were removed."
+              "Bounded provider results do not prove absent provider events were removed."
           }
         }
       })

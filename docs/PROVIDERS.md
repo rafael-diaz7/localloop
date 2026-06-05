@@ -4,7 +4,7 @@ LocalLoop keeps provider-specific parsing in `packages/providers` and persists
 provider data through normalized database rows. The domain model should describe
 LocalLoop concepts, not Ticketmaster-specific fields.
 
-## Current Provider
+## Current Providers
 
 `ticketmaster-discovery` uses the public Ticketmaster Discovery API event search
 endpoint:
@@ -24,6 +24,40 @@ around Event Content storage, removal requests, and monetization. See the
 and [Ticketmaster Developer Terms](https://developer.ticketmaster.com/support/terms-of-use/).
 LocalLoop documents the technical behavior implemented here but does not
 interpret or automate legal compliance.
+
+`smithsonian` uses the Smithsonian Institution public events calendar Atom feed
+served by Trumba:
+
+```text
+https://www.trumba.com/calendars/smithsonian-events.xml
+```
+
+The Smithsonian adapter uses this structured feed directly and does not scrape
+HTML pages. LocalLoop stores provider attribution in the source metadata and
+should display or otherwise preserve Smithsonian attribution wherever imported
+content is surfaced. The adapter stores the latest normalized/raw provider
+snapshot needed for LocalLoop event listings; usage must still follow the
+Smithsonian and Trumba terms that apply to the feed.
+
+Run the no-database probe before importing:
+
+```bash
+pnpm provider:probe:smithsonian
+```
+
+The probe downloads the Atom feed, parses the first 100 entries, prints
+normalized JSON, and includes category, venue, and price summary counts.
+
+Run ingestion with:
+
+```bash
+pnpm ingest:smithsonian
+```
+
+Smithsonian ingestion requires `DATABASE_URL` but no provider API key. A twice
+daily refresh cadence is appropriate for parity with the initial Ticketmaster
+timer; a future scheduler can add a dedicated Smithsonian timer using
+`pnpm ingest:smithsonian`.
 
 ## DMV Import Parameters
 
@@ -71,6 +105,54 @@ secret-bearing request URLs.
 
 Events without `dates.start.dateTime` are skipped for now because LocalLoop
 needs a concrete UTC start timestamp for listing order.
+
+## Smithsonian Field Mapping
+
+| Smithsonian Atom/Trumba field        | LocalLoop target                                      |
+| ------------------------------------ | ----------------------------------------------------- |
+| `id`                                 | normalized external event ID and `events.external_id` |
+| `title`                              | `events.title`                                        |
+| `gd:when startTime`                  | `events.start_at`                                     |
+| `gd:when endTime`                    | `events.end_at` when present                          |
+| `gc:notes`, falling back to content  | `events.description`                                  |
+| `gc:venue`, falling back to gd:where | `venues.name`                                         |
+| `gc:eventlocation` / `gd:where`      | `venues.display_address`, inferred locality/region    |
+| `gc:categories`                      | `event_categories` canonical categories               |
+| `gc:cost`                            | `events.price_status` and `provider_metadata.rawCost` |
+| `gc:sponsor`                         | `events.provider_metadata.sponsor`                    |
+| alternate link                       | `events.source_url`                                   |
+| `gc:getticketsregister`              | `events.provider_metadata.registrationUrl`            |
+| `gc:eventimage` / `gc:detailimage`   | `events.provider_metadata.imageUrl`                   |
+| accessibility fields when present    | `events.provider_metadata.accessibility`              |
+
+Smithsonian event identity uses the feed UID, for example:
+
+```text
+source = smithsonian
+external_id = http://uid.trumba.com/event/203523606
+source_id = smithsonian:http://uid.trumba.com/event/203523606
+```
+
+Recurring Smithsonian feed occurrences are treated as separate provider events
+when Trumba emits separate entry IDs. LocalLoop does not create recurring-event
+masters or recurrence rules.
+
+## Smithsonian DMV Filtering
+
+The Smithsonian feed can include nationwide Smithsonian-affiliated events.
+LocalLoop imports only entries whose `gc:venue`, `gc:eventlocation`, or
+`gd:where` text contains a clear District of Columbia, Maryland, Virginia, or
+known DMV Smithsonian venue signal. Direct geography signals include
+`Washington, DC`, `District of Columbia`, `MD`, `Maryland`, `VA`, and
+`Virginia`. Known DMV venue signals cover Smithsonian museums and spaces such
+as Smithsonian Castle, American History Museum, Natural History Museum, Portrait
+Gallery, National Zoo, Anacostia Community Museum, Asian Art Museum, and the
+Udvar-Hazy Center. Entries with no clear DMV signal are skipped rather than
+guessed; for example, a listing in `Juneau, Alaska` is excluded.
+
+This is intentionally a provider-level positive filter. It avoids importing
+online or nationwide listings with ambiguous location text until LocalLoop has a
+stronger geocoding/location enrichment layer.
 
 ## Lifecycle Rules
 
@@ -124,6 +206,22 @@ map to LocalLoop categories through focused keyword logic:
 | unmapped or uncertain                        | `other`               |
 
 Unmapped classifications are stored as `other` rather than discarded.
+
+Smithsonian category labels map as follows:
+
+| Smithsonian category  | LocalLoop category |
+| --------------------- | ------------------ |
+| Gallery Talks & Tours | `arts-culture`     |
+| Kids & Families       | `family`           |
+| Workshops             | `education`        |
+| Performances          | `arts-culture`     |
+| Culinary Arts         | `food-drink`       |
+| After Five            | `arts-culture`     |
+| unmapped or uncertain | `other`            |
+
+Smithsonian cost text maps to `free` when it contains `free`, to `paid` when it
+contains `price`, `ticket`, `$`, or `registration`, and to `unknown` otherwise.
+The raw cost text remains in provider metadata for later improvements.
 
 ## Identity And Upsert Rules
 
