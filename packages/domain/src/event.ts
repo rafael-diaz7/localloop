@@ -6,7 +6,7 @@ export const eventPriceStatuses = ["free", "paid", "unknown"] as const;
 export const eventPriceStatusSchema = z.enum(eventPriceStatuses);
 export type EventPriceStatus = z.infer<typeof eventPriceStatusSchema>;
 
-export const eventStatuses = ["active", "cancelled"] as const;
+export const eventStatuses = ["active", "cancelled", "expired"] as const;
 export const eventStatusSchema = z.enum(eventStatuses);
 export type EventStatus = z.infer<typeof eventStatusSchema>;
 

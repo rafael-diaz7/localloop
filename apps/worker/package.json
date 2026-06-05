@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "ingest:ticketmaster": "tsx src/ingest-ticketmaster.ts",
+    "ingestion:status": "tsx src/ingestion-status.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint . --max-warnings=0",

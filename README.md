@@ -99,6 +99,9 @@ Add the key to your local `.env` file:
 TICKETMASTER_API_KEY=your_api_key_here
 ```
 
+The `.env` file also contains local database credentials and must not be
+committed.
+
 Then run the database setup and ingestion command:
 
 ```bash
@@ -120,13 +123,78 @@ The initial DMV import uses the Ticketmaster event search endpoint with:
 `includeTBD=no`, `includeTest=no`, `sort=date,asc`, `locale=en-us`, `size=100`,
 and up to 5 pages. This avoids relying only on a market ID that could miss
 Northern Virginia. `TICKETMASTER_INGEST_RADIUS_MILES`,
-`TICKETMASTER_INGEST_WINDOW_DAYS`, `TICKETMASTER_INGEST_MAX_PAGES`, and
-`TICKETMASTER_INGEST_PAGE_SIZE` can tune the bounded import.
+`TICKETMASTER_INGEST_CENTER_LATITUDE`,
+`TICKETMASTER_INGEST_CENTER_LONGITUDE`, `TICKETMASTER_INGEST_WINDOW_DAYS`,
+`TICKETMASTER_INGEST_MAX_PAGES`, and `TICKETMASTER_INGEST_PAGE_SIZE` can tune
+the bounded import.
+
+Each ingestion run records provider, requested time window, geographic scope,
+pagination limits, fetch coverage, fetched/imported/inserted/updated/skipped
+counts, expired counts, and skipped-event reasons in `ingestion_runs`. The
+command output prints the same operational summary without printing API keys or
+secret-bearing request URLs.
+
+To inspect recent runs:
+
+```bash
+pnpm ingestion:status
+```
+
+Ticketmaster-backed events are marked `expired` when their `end_at` is in the
+past, or when `start_at` is in the past and no end time exists. Active search
+results continue to require `status = active`, so expired and cancelled events
+do not appear as upcoming selectable events. Seed/demo events remain relative to
+the seed time and continue to work for local development.
+
+Provider-removal reconciliation is deliberately deferred. The current
+Ticketmaster import is a bounded search window and may stop at
+`TICKETMASTER_INGEST_MAX_PAGES`; an event missing from one bounded response does
+not prove the provider removed it.
 
 Provider usage must follow Ticketmaster's current API terms, including terms
 around Event Content storage, removal requests, and monetization. This
 repository documents the implemented technical behavior but does not automate
 legal compliance.
+
+## Scheduled Ticketmaster Ingestion
+
+The homelab deployment includes repository-managed systemd units:
+
+```text
+infra/systemd/localloop-ticketmaster-ingest.service
+infra/systemd/localloop-ticketmaster-ingest.timer
+```
+
+The service runs as user `goose`, uses `/home/goose/projects/localloop` as its
+working directory, loads `/home/goose/projects/localloop/.env`, and executes
+`pnpm ingest:ticketmaster`. It does not start the Next.js web app.
+
+Install or refresh the units with symlinks:
+
+```bash
+sudo ln -sf /home/goose/projects/localloop/infra/systemd/localloop-ticketmaster-ingest.service /etc/systemd/system/localloop-ticketmaster-ingest.service
+sudo ln -sf /home/goose/projects/localloop/infra/systemd/localloop-ticketmaster-ingest.timer /etc/systemd/system/localloop-ticketmaster-ingest.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now localloop-ticketmaster-ingest.timer
+```
+
+The timer runs twice daily at approximately 6:00 AM and 6:00 PM local server
+time with up to 10 minutes of randomized delay.
+
+Check the schedule and timer status:
+
+```bash
+systemctl list-timers --all | grep localloop
+systemctl status localloop-ticketmaster-ingest.timer --no-pager
+```
+
+Manually trigger and inspect a run:
+
+```bash
+sudo systemctl start localloop-ticketmaster-ingest.service
+sudo systemctl status localloop-ticketmaster-ingest.service --no-pager
+journalctl -u localloop-ticketmaster-ingest.service -n 100 --no-pager
+```
 
 ## Workspace Layout
 
@@ -153,6 +221,8 @@ pnpm db:migrate    Run Drizzle migrations
 pnpm db:seed       Seed fictional local development events
 pnpm ingest:ticketmaster
                    Import bounded upcoming DMV events from Ticketmaster
+pnpm ingestion:status
+                   Print recent ingestion run status and lifecycle counts
 ```
 
 ## License

@@ -64,6 +64,14 @@ type NormalizedTicketmasterConfig = {
   now: Date;
 };
 
+type TicketmasterFetchCoverage = {
+  pagesFetched: number;
+  lastPageFetched?: number;
+  providerTotalPages?: number;
+  providerTotalElements?: number;
+  completedConfiguredFetchScope: boolean;
+};
+
 const ticketmasterEntitySchema = z
   .object({
     id: z.string().optional(),
@@ -325,7 +333,6 @@ export function buildTicketmasterDiscoveryUrl(
   }
 ) {
   const startDateTime = formatTicketmasterDateTime(config.now);
-  const endDateTime = new Date(config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000);
   const url = new URL(TICKETMASTER_DISCOVERY_ENDPOINT);
 
   url.searchParams.set("apikey", config.apiKey);
@@ -334,7 +341,7 @@ export function buildTicketmasterDiscoveryUrl(
   url.searchParams.set("unit", "miles");
   url.searchParams.set("countryCode", "US");
   url.searchParams.set("startDateTime", startDateTime);
-  url.searchParams.set("endDateTime", formatTicketmasterDateTime(endDateTime));
+  url.searchParams.set("endDateTime", formatTicketmasterDateTime(ticketmasterWindowEnd(config)));
   url.searchParams.set("includeTBA", "no");
   url.searchParams.set("includeTBD", "no");
   url.searchParams.set("includeTest", "no");
@@ -353,6 +360,10 @@ export async function fetchTicketmasterDiscoveryEvents(
   const fetchImpl = config.fetchImpl ?? fetch;
   const eventsByExternalId = new Map<string, NormalizedEvent>();
   const skippedReasons = new Map<string, NormalizedEventSkipReason>();
+  const coverage: TicketmasterFetchCoverage = {
+    pagesFetched: 0,
+    completedConfiguredFetchScope: false
+  };
   let fetchedCount = 0;
   let skippedCount = 0;
 
@@ -371,6 +382,14 @@ export async function fetchTicketmasterDiscoveryEvents(
 
     const parsed = parseTicketmasterDiscoveryResponse(await response.json());
     const pageEvents = parsed._embedded?.events ?? [];
+    const currentPage = parsed.page?.number ?? page;
+    const totalPages = parsed.page?.totalPages;
+    const totalElements = parsed.page?.totalElements;
+
+    coverage.pagesFetched += 1;
+    coverage.lastPageFetched = currentPage;
+    coverage.providerTotalPages = totalPages;
+    coverage.providerTotalElements = totalElements;
     fetchedCount += pageEvents.length;
 
     for (const event of pageEvents) {
@@ -392,12 +411,18 @@ export async function fetchTicketmasterDiscoveryEvents(
       eventsByExternalId.set(normalizedEvent.externalId, normalizedEvent);
     }
 
-    const currentPage = parsed.page?.number ?? page;
-    const totalPages = parsed.page?.totalPages;
-
     if (!totalPages || currentPage >= totalPages - 1) {
+      coverage.completedConfiguredFetchScope = Boolean(totalPages);
       break;
     }
+  }
+
+  if (
+    coverage.providerTotalPages !== undefined &&
+    coverage.pagesFetched >= Math.min(coverage.providerTotalPages, normalizedConfig.maxPages)
+  ) {
+    coverage.completedConfiguredFetchScope =
+      coverage.providerTotalPages <= normalizedConfig.maxPages;
   }
 
   return {
@@ -413,6 +438,9 @@ export async function fetchTicketmasterDiscoveryEvents(
       timeWindowDays: normalizedConfig.timeWindowDays,
       maxPages: normalizedConfig.maxPages,
       pageSize: normalizedConfig.pageSize,
+      requestedWindowStart: formatTicketmasterDateTime(normalizedConfig.now),
+      requestedWindowEnd: formatTicketmasterDateTime(ticketmasterWindowEnd(normalizedConfig)),
+      fetchCoverage: coverage,
       skippedReasons: [...skippedReasons.values()],
       requestParameters: ticketmasterRequestParameterSummary(normalizedConfig)
     }
@@ -455,9 +483,7 @@ function ticketmasterRequestParameterSummary(config: NormalizedTicketmasterConfi
     unit: "miles",
     countryCode: "US",
     startDateTime: formatTicketmasterDateTime(config.now),
-    endDateTime: formatTicketmasterDateTime(
-      new Date(config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000)
-    ),
+    endDateTime: formatTicketmasterDateTime(ticketmasterWindowEnd(config)),
     includeTBA: "no",
     includeTBD: "no",
     includeTest: "no",
@@ -466,6 +492,12 @@ function ticketmasterRequestParameterSummary(config: NormalizedTicketmasterConfi
     maxPages: config.maxPages,
     locale: "en-us"
   };
+}
+
+function ticketmasterWindowEnd(
+  config: Pick<NormalizedTicketmasterConfig, "now" | "timeWindowDays">
+) {
+  return new Date(config.now.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000);
 }
 
 function normalizePrice(priceRanges: TicketmasterDiscoveryEvent["priceRanges"] = []) {

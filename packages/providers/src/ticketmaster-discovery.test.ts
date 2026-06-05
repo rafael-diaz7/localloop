@@ -182,6 +182,51 @@ describe("Ticketmaster Discovery adapter", () => {
     ]);
   });
 
+  it("records incomplete bounded fetch coverage without implying provider removals", async () => {
+    const parsed = parseTicketmasterDiscoveryResponse(typicalTicketmasterResponse);
+    const validEvent = parsed._embedded?.events?.[0];
+
+    expect(validEvent).toBeDefined();
+
+    if (!validEvent) {
+      throw new Error("Expected a valid Ticketmaster fixture event");
+    }
+
+    const batch = await fetchTicketmasterDiscoveryEvents({
+      apiKey: "test-key",
+      maxPages: 1,
+      now: new Date("2026-06-02T12:00:00Z"),
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        statusText: "OK",
+        json: async () => ({
+          _embedded: {
+            events: [validEvent]
+          },
+          page: {
+            size: 100,
+            totalElements: 250,
+            totalPages: 3,
+            number: 0
+          }
+        })
+      })
+    });
+
+    expect(batch.metadata).toMatchObject({
+      requestedWindowStart: "2026-06-02T12:00:00Z",
+      requestedWindowEnd: "2026-07-02T12:00:00Z",
+      fetchCoverage: {
+        pagesFetched: 1,
+        lastPageFetched: 0,
+        providerTotalPages: 3,
+        providerTotalElements: 250,
+        completedConfiguredFetchScope: false
+      }
+    });
+  });
+
   it("throws a useful error when the API key is missing", () => {
     expect(() => requireTicketmasterApiKey({})).toThrow("TICKETMASTER_API_KEY is required");
   });

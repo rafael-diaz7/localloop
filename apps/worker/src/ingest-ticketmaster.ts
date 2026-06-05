@@ -10,19 +10,20 @@ import {
   requireTicketmasterApiKey,
   ticketmasterDiscoverySource
 } from "@localloop/providers";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
+import { loadNearestEnvFile } from "./env";
 import { formatTicketmasterIngestionSummary } from "./ticketmaster-ingestion-summary";
 
 const DEFAULT_RADIUS_MILES = 25;
+const DEFAULT_CENTER_LATITUDE = 38.9072;
+const DEFAULT_CENTER_LONGITUDE = -77.0369;
 const DEFAULT_TIME_WINDOW_DAYS = 30;
 const DEFAULT_MAX_PAGES = 5;
 const DEFAULT_PAGE_SIZE = 100;
 
 export async function ingestTicketmaster() {
-  loadNearestEnvFile();
+  loadNearestEnvFile(import.meta.url);
 
   const databaseUrl = process.env.DATABASE_URL?.trim();
 
@@ -32,6 +33,10 @@ export async function ingestTicketmaster() {
 
   const apiKey = requireTicketmasterApiKey();
   const config = readTicketmasterIngestConfig();
+  const requestedAt = new Date();
+  const requestedWindowEnd = new Date(
+    requestedAt.getTime() + config.timeWindowDays * 24 * 60 * 60 * 1000
+  );
   const connection = createDbConnection(databaseUrl);
   let runId: string | undefined;
 
@@ -40,15 +45,21 @@ export async function ingestTicketmaster() {
 
     const run = await startIngestionRun(connection.db, ticketmasterDiscoverySource.key, {
       radiusMiles: config.radiusMiles,
+      centerLatitude: config.centerLatitude,
+      centerLongitude: config.centerLongitude,
       timeWindowDays: config.timeWindowDays,
+      requestedWindowStart: requestedAt.toISOString(),
+      requestedWindowEnd: requestedWindowEnd.toISOString(),
       maxPages: config.maxPages,
-      pageSize: config.pageSize
+      pageSize: config.pageSize,
+      removalReconciliation: "deferred"
     });
     runId = run.id;
 
     const batch = await fetchTicketmasterDiscoveryEvents({
       apiKey,
-      ...config
+      ...config,
+      now: requestedAt
     });
     const result = await importProviderEventBatch(connection.db, batch, runId);
 
@@ -56,8 +67,13 @@ export async function ingestTicketmaster() {
       formatTicketmasterIngestionSummary({
         fetchedCount: batch.fetchedCount,
         importedCount: result.importedCount,
+        insertedCount: result.insertedCount,
+        updatedCount: result.updatedCount,
         skippedCount: result.skippedCount,
-        skippedReasons: batch.skippedReasons
+        skippedReasons: batch.skippedReasons,
+        expiredCount: result.expiredCount,
+        removedCount: result.removedCount,
+        removalReconciliation: "deferred"
       })
     );
 
@@ -76,6 +92,8 @@ export async function ingestTicketmaster() {
 function readTicketmasterIngestConfig() {
   return {
     radiusMiles: positiveIntegerEnv("TICKETMASTER_INGEST_RADIUS_MILES", DEFAULT_RADIUS_MILES),
+    centerLatitude: numberEnv("TICKETMASTER_INGEST_CENTER_LATITUDE", DEFAULT_CENTER_LATITUDE),
+    centerLongitude: numberEnv("TICKETMASTER_INGEST_CENTER_LONGITUDE", DEFAULT_CENTER_LONGITUDE),
     timeWindowDays: positiveIntegerEnv("TICKETMASTER_INGEST_WINDOW_DAYS", DEFAULT_TIME_WINDOW_DAYS),
     maxPages: positiveIntegerEnv("TICKETMASTER_INGEST_MAX_PAGES", DEFAULT_MAX_PAGES),
     pageSize: positiveIntegerEnv("TICKETMASTER_INGEST_PAGE_SIZE", DEFAULT_PAGE_SIZE)
@@ -94,51 +112,16 @@ function positiveIntegerEnv(name: string, fallback: number) {
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
-function loadNearestEnvFile() {
-  let directory = dirname(fileURLToPath(import.meta.url));
+function numberEnv(name: string, fallback: number) {
+  const rawValue = process.env[name]?.trim();
 
-  for (let depth = 0; depth < 6; depth += 1) {
-    const candidate = join(directory, ".env");
-
-    if (existsSync(candidate)) {
-      loadEnvFile(candidate);
-      return;
-    }
-
-    const parent = dirname(directory);
-
-    if (parent === directory) {
-      return;
-    }
-
-    directory = parent;
+  if (!rawValue) {
+    return fallback;
   }
-}
 
-function loadEnvFile(path: string) {
-  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
+  const value = Number(rawValue);
 
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf("=");
-
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, separatorIndex).trim();
-    const value = trimmed
-      .slice(separatorIndex + 1)
-      .trim()
-      .replace(/^['"]|['"]$/g, "");
-
-    if (!(key in process.env)) {
-      process.env[key] = value;
-    }
-  }
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function errorMessage(error: unknown) {

@@ -4,6 +4,7 @@ import {
   eventCategoriesTable,
   eventCategoryEnum,
   eventPriceStatusEnum,
+  eventStatusEnum,
   events,
   ingestionRunStatusEnum,
   ingestionRuns,
@@ -22,6 +23,7 @@ describe("database schema", () => {
     expect(eventCategoriesTable).toBeDefined();
     expect(eventCategoryEnum.enumValues).toContain("community");
     expect(eventPriceStatusEnum.enumValues).toEqual(["free", "paid", "unknown"]);
+    expect(eventStatusEnum.enumValues).toEqual(["active", "cancelled", "expired"]);
     expect(ingestionRunStatusEnum.enumValues).toEqual(["running", "succeeded", "failed"]);
   });
 });

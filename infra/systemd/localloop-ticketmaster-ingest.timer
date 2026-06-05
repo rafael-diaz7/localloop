@@ -1,0 +1,11 @@
+[Unit]
+Description=Run LocalLoop Ticketmaster Discovery ingestion twice daily
+
+[Timer]
+OnCalendar=*-*-* 06,18:00:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=localloop-ticketmaster-ingest.service
+
+[Install]
+WantedBy=timers.target

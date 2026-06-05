@@ -1,5 +1,5 @@
 import type { EventCategory, EventPriceStatus, EventStatus } from "@localloop/domain";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
 import type { DbClient } from "./client";
@@ -60,6 +60,20 @@ export type ProviderEventBatchInput = {
   metadata?: Record<string, unknown>;
 };
 
+export type ProviderLifecycleCounts = {
+  insertedCount: number;
+  updatedCount: number;
+  expiredCount: number;
+  removedCount: number;
+};
+
+export type ProviderEventLifecycleInput = {
+  startAt: Date;
+  endAt?: Date | null;
+};
+
+type ProviderLifecycleDb = Pick<DbClient, "update">;
+
 export async function ensureSource(db: DbClient, source: ProviderSourceInput) {
   const [row] = await db
     .insert(sources)
@@ -119,13 +133,36 @@ export async function markIngestionRunFailed(db: DbClient, runId: string, errorM
     .where(eq(ingestionRuns.id, runId));
 }
 
+export async function listRecentIngestionRuns(db: DbClient, limit = 5) {
+  return db
+    .select({
+      source: ingestionRuns.source,
+      status: ingestionRuns.status,
+      startedAt: ingestionRuns.startedAt,
+      finishedAt: ingestionRuns.finishedAt,
+      fetchedCount: ingestionRuns.fetchedCount,
+      importedCount: ingestionRuns.importedCount,
+      skippedCount: ingestionRuns.skippedCount,
+      errorMessage: ingestionRuns.errorMessage,
+      metadata: ingestionRuns.metadata
+    })
+    .from(ingestionRuns)
+    .orderBy(desc(ingestionRuns.startedAt))
+    .limit(limit);
+}
+
 export async function importProviderEventBatch(
   db: DbClient,
   batch: ProviderEventBatchInput,
   runId: string
 ) {
   const now = new Date();
-  let importedCount = 0;
+  const lifecycleCounts: ProviderLifecycleCounts = {
+    insertedCount: 0,
+    updatedCount: 0,
+    expiredCount: 0,
+    removedCount: 0
+  };
 
   await db.transaction(async (tx) => {
     for (const event of batch.events) {
@@ -158,6 +195,12 @@ export async function importProviderEventBatch(
       if (!venue) {
         throw new Error(`Failed to upsert venue for provider event ${event.externalId}`);
       }
+
+      const [existingEvent] = await tx
+        .select({ id: events.id })
+        .from(events)
+        .where(and(eq(events.source, batch.source.key), eq(events.externalId, event.externalId)))
+        .limit(1);
 
       const [eventRow] = await tx
         .insert(events)
@@ -207,6 +250,12 @@ export async function importProviderEventBatch(
         throw new Error(`Failed to upsert provider event ${event.externalId}`);
       }
 
+      if (existingEvent) {
+        lifecycleCounts.updatedCount += 1;
+      } else {
+        lifecycleCounts.insertedCount += 1;
+      }
+
       await tx.delete(eventCategoriesTable).where(eq(eventCategoriesTable.eventId, eventRow.id));
       await tx.insert(eventCategoriesTable).values(
         event.categories.map((category) => ({
@@ -236,9 +285,9 @@ export async function importProviderEventBatch(
             }
           });
       }
-
-      importedCount += 1;
     }
+
+    lifecycleCounts.expiredCount = await expirePastProviderEvents(tx, batch.source.key, now);
 
     await tx
       .update(ingestionRuns)
@@ -246,17 +295,57 @@ export async function importProviderEventBatch(
         status: "succeeded",
         finishedAt: now,
         fetchedCount: batch.fetchedCount,
-        importedCount,
+        importedCount: lifecycleCounts.insertedCount + lifecycleCounts.updatedCount,
         skippedCount: batch.skippedCount,
-        metadata: batch.metadata
+        metadata: {
+          ...batch.metadata,
+          lifecycle: {
+            ...lifecycleCounts,
+            removalReconciliation: "deferred",
+            removalReconciliationReason:
+              "Bounded Ticketmaster search results do not prove absent provider events were removed."
+          }
+        }
       })
       .where(eq(ingestionRuns.id, runId));
   });
 
   return {
-    importedCount,
-    skippedCount: batch.skippedCount
+    importedCount: lifecycleCounts.insertedCount + lifecycleCounts.updatedCount,
+    skippedCount: batch.skippedCount,
+    ...lifecycleCounts
   };
+}
+
+export async function expirePastProviderEvents(
+  db: ProviderLifecycleDb,
+  sourceKey: string,
+  now = new Date()
+) {
+  const expiredRows = await db
+    .update(events)
+    .set({
+      status: "expired",
+      updatedAt: now
+    })
+    .where(
+      and(
+        eq(events.source, sourceKey),
+        eq(events.status, "active"),
+        sql`coalesce(${events.endAt}, ${events.startAt}) < ${now.toISOString()}::timestamptz`
+      )
+    )
+    .returning({ id: events.id });
+
+  return expiredRows.length;
+}
+
+export function providerEventExpiresBefore(event: ProviderEventLifecycleInput) {
+  return event.endAt ?? event.startAt;
+}
+
+export function isProviderEventExpired(event: ProviderEventLifecycleInput, now = new Date()) {
+  return providerEventExpiresBefore(event).getTime() < now.getTime();
 }
 
 function providerEventSourceId(sourceKey: string, externalId: string) {

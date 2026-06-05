@@ -14,11 +14,17 @@ export {
 } from "./events";
 export {
   ensureSource,
+  expirePastProviderEvents,
   importProviderEventBatch,
+  isProviderEventExpired,
+  listRecentIngestionRuns,
   markIngestionRunFailed,
+  providerEventExpiresBefore,
   startIngestionRun,
   type ProviderEventBatchInput,
   type ProviderEventInput,
+  type ProviderEventLifecycleInput,
+  type ProviderLifecycleCounts,
   type ProviderSourceInput,
   type ProviderVenueInput
 } from "./ingestion";

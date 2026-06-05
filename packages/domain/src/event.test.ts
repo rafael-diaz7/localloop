@@ -47,5 +47,6 @@ describe("event status schemas", () => {
   it("validates event price and lifecycle statuses", () => {
     expect(eventPriceStatusSchema.parse("free")).toBe("free");
     expect(eventStatusSchema.parse("active")).toBe("active");
+    expect(eventStatusSchema.parse("expired")).toBe("expired");
   });
 });

@@ -45,6 +45,12 @@ search instead of only a market ID:
 The docs note that `latlong` is deprecated in favor of `geoPoint`, so the
 adapter encodes the configured center as a geohash.
 
+Each Ticketmaster run records its requested future window start/end, DMV center
+latitude/longitude, radius, page size, max page count, provider page totals when
+available, and whether the configured fetch scope completed. This metadata is
+stored in `ingestion_runs.metadata` and intentionally excludes the API key and
+secret-bearing request URLs.
+
 ## Field Mapping
 
 | Ticketmaster field                                                  | LocalLoop target                                              |
@@ -65,6 +71,39 @@ adapter encodes the configured center as a geohash.
 
 Events without `dates.start.dateTime` are skipped for now because LocalLoop
 needs a concrete UTC start timestamp for listing order.
+
+## Lifecycle Rules
+
+Provider-backed rows keep an explicit `events.status`:
+
+| Status      | Meaning                                                                                  |
+| ----------- | ---------------------------------------------------------------------------------------- |
+| `active`    | The provider event is upcoming/current and eligible for active search.                   |
+| `cancelled` | Ticketmaster reported a cancelled status code for the event.                             |
+| `expired`   | LocalLoop determined the event's end time, or start time without an end, is in the past. |
+
+During successful Ticketmaster ingestion, LocalLoop marks active
+`ticketmaster-discovery` events as `expired` when:
+
+```text
+coalesce(end_at, start_at) < now
+```
+
+The `/events` search only returns `status = active` rows and still applies its
+upcoming date filters, so cancelled and expired provider rows are not shown as
+selectable upcoming events.
+
+Provider-removal reconciliation is intentionally deferred for this slice. The
+Ticketmaster importer is a bounded search over a configured window and page
+limit. A provider event missing from one bounded response may simply be outside
+the returned page range, outside the current window, affected by provider
+ranking/filter behavior, or temporarily absent from a partial response. Missing
+from a bounded fetch must not automatically mean removed.
+
+A future removal implementation must only mark rows removed after a run proves
+it fully covered the relevant configured scope, or after a direct per-event
+provider lookup clearly reports the event as removed, unavailable, or otherwise
+not active.
 
 ## Category Mapping
 
