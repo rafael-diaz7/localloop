@@ -8,7 +8,13 @@ import {
 import Link from "next/link";
 
 import { EventSearchForm } from "./EventSearchForm";
-import { formatCategory, formatDistanceMiles, formatEventDate, formatEventPrice } from "./format";
+import {
+  formatCategory,
+  formatDistanceMiles,
+  formatEventDate,
+  formatEventPreviewDescription,
+  formatEventPrice
+} from "./format";
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +177,9 @@ function EventCard({ event }: { event: SearchableEvent }) {
         </Link>
       </h3>
       {event.description ? (
-        <p className="mt-3 text-sm leading-6 text-loop-ink/70">{event.description}</p>
+        <p className="mt-3 text-sm leading-6 text-loop-ink/70">
+          {formatEventPreviewDescription(event.description)}
+        </p>
       ) : null}
 
       <p className="mt-5 text-sm font-semibold text-loop-ink">

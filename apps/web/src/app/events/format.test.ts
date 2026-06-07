@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCategory, formatDistanceMiles, formatEventPrice } from "./format";
+import {
+  formatCategory,
+  formatDistanceMiles,
+  formatEventPreviewDescription,
+  formatEventPrice
+} from "./format";
 
 describe("event card formatting", () => {
   it("formats event prices", () => {
@@ -41,5 +46,20 @@ describe("event card formatting", () => {
     expect(formatDistanceMiles(0.74)).toBe("0.7 mi away");
     expect(formatDistanceMiles(4.34)).toBe("4.3 mi away");
     expect(formatDistanceMiles(12.2)).toBe("12 mi away");
+  });
+
+  it("truncates event preview descriptions on word boundaries", () => {
+    const description =
+      "Join us for an incredible evening of live music, food vendors, community activities, performances, and more from local artists, neighborhood groups, and visiting makers.";
+
+    expect(formatEventPreviewDescription(description)).toBe(
+      "Join us for an incredible evening of live music, food vendors, community activities, performances, and more from local artists, neighborhood groups, and…"
+    );
+  });
+
+  it("leaves short event preview descriptions unchanged", () => {
+    expect(formatEventPreviewDescription("A compact neighborhood market.")).toBe(
+      "A compact neighborhood market."
+    );
   });
 });
