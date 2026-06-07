@@ -3,6 +3,9 @@ set -Eeuo pipefail
 
 SERVICE_NAME="localloop-web.service"
 HEALTH_URL="http://127.0.0.1:3000/api/health"
+HEALTH_INITIAL_DELAY_SECONDS="${HEALTH_INITIAL_DELAY_SECONDS:-5}"
+HEALTH_CHECK_TIMEOUT_SECONDS="${HEALTH_CHECK_TIMEOUT_SECONDS:-60}"
+HEALTH_CHECK_INTERVAL_SECONDS="${HEALTH_CHECK_INTERVAL_SECONDS:-2}"
 
 log() {
   printf '[deploy] %s\n' "$1"
@@ -40,6 +43,28 @@ load_env() {
   fi
 }
 
+wait_for_health() {
+  local deadline
+  local now
+
+  log "Waiting ${HEALTH_INITIAL_DELAY_SECONDS}s before health check."
+  sleep "${HEALTH_INITIAL_DELAY_SECONDS}"
+
+  deadline=$((SECONDS + HEALTH_CHECK_TIMEOUT_SECONDS))
+
+  until curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; do
+    now="${SECONDS}"
+
+    if (( now >= deadline )); then
+      printf 'Health check failed after %ss: %s\n' "${HEALTH_CHECK_TIMEOUT_SECONDS}" "${HEALTH_URL}" >&2
+      return 1
+    fi
+
+    log "Health check not ready; retrying in ${HEALTH_CHECK_INTERVAL_SECONDS}s."
+    sleep "${HEALTH_CHECK_INTERVAL_SECONDS}"
+  done
+}
+
 main() {
   require_repo_root
   require_clean_worktree
@@ -63,7 +88,7 @@ main() {
   sudo systemctl restart "${SERVICE_NAME}"
 
   log "Smoke checking ${HEALTH_URL}."
-  curl -fsS "${HEALTH_URL}" >/dev/null
+  wait_for_health
 
   log "Deploy complete: dependencies installed, migrations applied, web service restarted, health check passed."
 }
