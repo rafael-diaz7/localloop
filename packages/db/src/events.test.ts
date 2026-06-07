@@ -2,7 +2,15 @@ import { CasingCache } from "drizzle-orm/casing";
 import { describe, expect, it } from "vitest";
 
 import type { DbClient } from "./client";
-import { buildSearchEventsSql, searchEvents, type SearchEventsInput } from "./events";
+import {
+  buildEventDetailSql,
+  buildSearchEventsSql,
+  getEventDetail,
+  searchEvents,
+  type SearchEventsInput
+} from "./events";
+
+const fixedNow = new Date("2026-06-05T00:00:00.000Z");
 
 describe("public event search query", () => {
   it("displays canonical grouped events instead of duplicate group members", () => {
@@ -28,6 +36,26 @@ describe("public event search query", () => {
 
     expect(compiled).toContain("hidden_egm.decision = 'rejected'");
     expect(compiled).toContain("hidden_egm.reasons->>'standaloneAddon' = 'true'");
+  });
+});
+
+describe("public event detail query", () => {
+  it("only returns active upcoming events", () => {
+    const compiled = compileEventDetailSql();
+
+    expect(compiled).toContain("where e.id = $1::uuid");
+    expect(compiled).toContain("and e.status = 'active'");
+    expect(compiled).toContain("and e.start_at >= $2::timestamptz");
+  });
+
+  it("selects joined venue, source, and category data", () => {
+    const compiled = compileEventDetailSql();
+
+    expect(compiled).toContain("inner join venues v on e.venue_id = v.id");
+    expect(compiled).toContain("left join sources s on e.source = s.key");
+    expect(compiled).toContain("left join event_categories ec on e.id = ec.event_id");
+    expect(compiled).toContain('v.display_address as "displayAddress"');
+    expect(compiled).toContain('s.display_name as "sourceDisplayName"');
   });
 });
 
@@ -66,6 +94,35 @@ describe("public event search results", () => {
   });
 });
 
+describe("public event detail results", () => {
+  it("maps event detail rows", async () => {
+    const event = await getEventDetail(fakeDb([eventRow()]), eventRow().id, fixedNow);
+
+    expect(event).toMatchObject({
+      id: "event-1",
+      title: "Jazz Night",
+      displayAddress: "901 Wharf St SW, Washington, DC",
+      categories: ["music"],
+      sourceDisplayName: "Smithsonian",
+      duplicateCount: 0
+    });
+  });
+
+  it("returns null when the query finds no active upcoming event", async () => {
+    await expect(getEventDetail(fakeDb([]), "event-1", fixedNow)).resolves.toBeNull();
+  });
+});
+
+function compileEventDetailSql() {
+  return buildEventDetailSql("11111111-1111-4111-8111-111111111111", fixedNow).toQuery({
+    casing: new CasingCache(),
+    escapeName: (name) => `"${name}"`,
+    escapeParam: (index) => `$${index + 1}`,
+    escapeString: (value) => `'${value}'`,
+    prepareTyping: () => "none"
+  }).sql;
+}
+
 function compileSearchSql() {
   return buildSearchEventsSql(searchInput()).toQuery({
     casing: new CasingCache(),
@@ -91,7 +148,7 @@ function searchInput(): SearchEventsInput {
     excludedCategories: [],
     price: "any",
     sort: "soonest",
-    now: new Date("2026-06-05T00:00:00.000Z")
+    now: fixedNow
   };
 }
 

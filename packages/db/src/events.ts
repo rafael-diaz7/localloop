@@ -37,6 +37,10 @@ export type SearchableEvent = UpcomingEvent & {
   distanceMiles: number;
 };
 
+export type EventDetail = UpcomingEvent & {
+  displayAddress: string;
+};
+
 export type SearchEventsInput = {
   location: Pick<DmvSearchLocation, "latitude" | "longitude">;
   radiusMiles: number;
@@ -71,6 +75,8 @@ type SearchEventRow = {
   groupId: string | null;
   memberCount: number | string | null;
 };
+
+type EventDetailRow = Omit<SearchEventRow, "distanceMiles">;
 
 export async function listUpcomingEvents(db: DbClient, now = new Date()): Promise<UpcomingEvent[]> {
   const rows = await db
@@ -151,6 +157,41 @@ export async function listUpcomingEvents(db: DbClient, now = new Date()): Promis
   return [...eventsById.values()];
 }
 
+export async function getEventDetail(
+  db: DbClient,
+  eventId: string,
+  now = new Date()
+): Promise<EventDetail | null> {
+  const rows = await db.execute<EventDetailRow>(buildEventDetailSql(eventId, now));
+  const row = rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    startAt: dateValue(row.startAt),
+    endAt: row.endAt ? dateValue(row.endAt) : null,
+    timezone: row.timezone,
+    venueName: row.venueName,
+    displayAddress: row.displayAddress,
+    locality: row.locality,
+    region: row.region,
+    categories: row.categories ?? [],
+    priceStatus: row.priceStatus,
+    minPriceCents: row.minPriceCents,
+    maxPriceCents: row.maxPriceCents,
+    currency: row.currency,
+    sourceUrl: row.sourceUrl,
+    sourceDisplayName: row.sourceDisplayName ?? fallbackSourceDisplayName(row.sourceKey),
+    groupId: row.groupId,
+    duplicateCount: duplicateCountFromMemberCount(row.memberCount)
+  };
+}
+
 export async function searchEvents(
   db: DbClient,
   input: SearchEventsInput
@@ -179,6 +220,75 @@ export async function searchEvents(
     duplicateCount: duplicateCountFromMemberCount(row.memberCount),
     distanceMiles: Number(row.distanceMiles)
   }));
+}
+
+export function buildEventDetailSql(eventId: string, now = new Date()) {
+  return sql`
+    with group_metadata as (
+      select
+        eg.canonical_event_id as event_id,
+        eg.id as group_id,
+        count(confirmed_egm.event_id)::int as member_count
+      from event_groups eg
+      inner join event_group_members confirmed_egm
+        on confirmed_egm.group_id = eg.id
+       and confirmed_egm.decision in ('auto_group', 'manual_group')
+      group by eg.canonical_event_id, eg.id
+    )
+    select
+      e.id,
+      e.title,
+      e.description,
+      e.start_at as "startAt",
+      e.end_at as "endAt",
+      e.timezone,
+      v.name as "venueName",
+      v.display_address as "displayAddress",
+      v.locality,
+      v.region,
+      coalesce(
+        array_agg(ec.category order by ec.category) filter (where ec.category is not null),
+        array[]::event_category[]
+      ) as categories,
+      e.price_status as "priceStatus",
+      e.min_price_cents as "minPriceCents",
+      e.max_price_cents as "maxPriceCents",
+      e.currency,
+      e.source_url as "sourceUrl",
+      e.source as "sourceKey",
+      s.display_name as "sourceDisplayName",
+      gm.group_id as "groupId",
+      gm.member_count as "memberCount"
+    from events e
+    inner join venues v on e.venue_id = v.id
+    left join sources s on e.source = s.key
+    left join event_categories ec on e.id = ec.event_id
+    left join group_metadata gm on gm.event_id = e.id
+    where e.id = ${eventId}::uuid
+      and e.status = 'active'
+      and e.start_at >= ${now.toISOString()}::timestamptz
+    group by
+      e.id,
+      e.title,
+      e.description,
+      e.start_at,
+      e.end_at,
+      e.timezone,
+      v.name,
+      v.display_address,
+      v.locality,
+      v.region,
+      e.price_status,
+      e.min_price_cents,
+      e.max_price_cents,
+      e.currency,
+      e.source_url,
+      e.source,
+      s.display_name,
+      gm.group_id,
+      gm.member_count
+    limit 1
+  `;
 }
 
 export function buildSearchEventsSql(input: SearchEventsInput) {

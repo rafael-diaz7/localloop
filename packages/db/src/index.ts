@@ -6,8 +6,10 @@ export {
   type DbConnection
 } from "./client";
 export {
+  getEventDetail,
   listUpcomingEvents,
   searchEvents,
+  type EventDetail,
   type SearchableEvent,
   type SearchEventsInput,
   type UpcomingEvent

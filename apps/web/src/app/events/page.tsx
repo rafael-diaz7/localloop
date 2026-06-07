@@ -165,7 +165,11 @@ function EventCard({ event }: { event: SearchableEvent }) {
         </time>
       </div>
 
-      <h3 className="mt-4 text-2xl font-semibold leading-snug">{event.title}</h3>
+      <h3 className="mt-4 text-2xl font-semibold leading-snug">
+        <Link href={`/events/${event.id}`} className="underline-offset-4 hover:underline">
+          {event.title}
+        </Link>
+      </h3>
       {event.description ? (
         <p className="mt-3 text-sm leading-6 text-loop-ink/70">{event.description}</p>
       ) : null}
