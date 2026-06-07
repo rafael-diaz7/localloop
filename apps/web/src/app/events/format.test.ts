@@ -29,7 +29,7 @@ describe("event card formatting", () => {
         maxPriceCents: 2800,
         currency: "USD"
       })
-    ).toBe("$18-$28");
+    ).toBe("$18–$28");
   });
 
   it("formats category labels", () => {

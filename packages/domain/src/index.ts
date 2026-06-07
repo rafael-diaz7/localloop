@@ -15,6 +15,10 @@ export {
   type EventGroupDecision
 } from "./event-deduplication";
 export {
+  formatEventPriceRange,
+  type EventPriceRangeInput
+} from "./event-price";
+export {
   allEventSearchCategories,
   dmvTimeZone,
   eventCategorySetMatchesFilters,
