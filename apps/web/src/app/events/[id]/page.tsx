@@ -56,7 +56,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           </p>
         </div>
 
-        <article className="mt-8 rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm md:p-8">
+        <article className="mt-8 rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm md:p-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-loop-moss/20 bg-loop-mist px-3 py-1 text-xs font-semibold uppercase tracking-wide text-loop-moss">
               {formatEventPrice(event)}
@@ -113,7 +113,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               href={event.sourceUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink"
+              className="inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink dark:hover:bg-loop-leaf"
             >
               View original event
             </a>

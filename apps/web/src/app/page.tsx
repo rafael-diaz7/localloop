@@ -23,14 +23,14 @@ export default function HomePage() {
           </p>
           <Link
             href="/events?lat=38.8904&lng=-77.0869&place=Courthouse%2C+Arlington%2C+VA&radius=10&date=next-7-days&price=any&sort=soonest"
-            className="mt-8 inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink"
+            className="mt-8 inline-flex rounded-lg bg-loop-moss px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink dark:hover:bg-loop-leaf"
           >
             Search events
           </Link>
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-[1fr_1.2fr]">
-          <section className="rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm">
             <h2 className="text-base font-semibold">Scaffold Includes</h2>
             <ul className="mt-4 space-y-3 text-sm text-loop-ink/75">
               {foundationItems.map((item) => (
@@ -42,7 +42,7 @@ export default function HomePage() {
             </ul>
           </section>
 
-          <section className="rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm">
             <h2 className="text-base font-semibold">Event Categories</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               {eventCategories.map((category) => (

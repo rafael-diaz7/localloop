@@ -172,7 +172,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-10 rounded-lg border border-loop-ink/10 bg-white p-5 shadow-sm md:p-6"
+      className="mt-10 rounded-lg border border-loop-ink/10 bg-loop-surface p-5 shadow-sm md:p-6"
     >
       <div className="grid gap-4 md:grid-cols-4">
         <div className="relative flex flex-col gap-2 md:col-span-2">
@@ -186,10 +186,10 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
             onChange={(event) => updateLocationInput(event.target.value)}
             placeholder="Address, neighborhood, city, or ZIP code"
             autoComplete="off"
-            className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
           />
           {locationSuggestions.length > 0 ? (
-            <div className="absolute left-0 right-0 top-[4.75rem] z-10 overflow-hidden rounded-lg border border-loop-ink/10 bg-white shadow-lg">
+            <div className="absolute left-0 right-0 top-[4.75rem] z-10 overflow-hidden rounded-lg border border-loop-ink/10 bg-loop-surface shadow-lg">
               {locationSuggestions.map((candidate) => (
                 <button
                   key={candidate.id}
@@ -219,7 +219,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
           <select
             value={radius}
             onChange={(event) => setRadius(Number(event.target.value) as typeof radius)}
-            className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
           >
             {eventSearchRadii.map((value) => (
               <option key={value} value={value}>
@@ -234,7 +234,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
           <select
             value={date}
             onChange={(event) => setDate(event.target.value as typeof date)}
-            className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
           >
             {eventDatePresets.map((value) => (
               <option key={value} value={value}>
@@ -253,7 +253,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
               type="date"
               value={from}
               onChange={(event) => setFrom(event.target.value)}
-              className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+              className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
             />
           </label>
           <label className="flex flex-col gap-2">
@@ -262,7 +262,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
               type="date"
               value={to}
               onChange={(event) => setTo(event.target.value)}
-              className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+              className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
             />
           </label>
         </div>
@@ -289,7 +289,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
           <select
             value={price}
             onChange={(event) => setPrice(event.target.value as typeof price)}
-            className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
           >
             {eventSearchPrices.map((value) => (
               <option key={value} value={value}>
@@ -304,7 +304,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value as typeof sort)}
-            className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
+            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
           >
             {eventSearchSorts.map((value) => (
               <option key={value} value={value}>
@@ -316,7 +316,7 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
 
         <button
           type="submit"
-          className="self-end rounded-lg bg-loop-moss px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink"
+          className="self-end rounded-lg bg-loop-moss px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink dark:hover:bg-loop-leaf"
         >
           Search events
         </button>

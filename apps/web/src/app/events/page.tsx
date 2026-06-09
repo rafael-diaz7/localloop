@@ -106,7 +106,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
         ) : null}
 
         {loadError ? (
-          <section className="mt-10 rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm">
+          <section className="mt-10 rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Events are unavailable</h2>
             <p className="mt-3 text-sm leading-6 text-loop-ink/70">
               Start PostgreSQL/PostGIS, run migrations, and seed the database to view local
@@ -135,7 +135,7 @@ function EventResults({ events, summary }: { events: SearchableEvent[]; summary:
       </div>
 
       {events.length === 0 ? (
-        <section className="mt-6 rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm">
+        <section className="mt-6 rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm">
           <h3 className="text-lg font-semibold">No events matched these filters</h3>
           <p className="mt-3 text-sm leading-6 text-loop-ink/70">
             Try increasing the radius, widening the date window, or removing category and price
@@ -155,7 +155,7 @@ function EventResults({ events, summary }: { events: SearchableEvent[]; summary:
 
 function EventCard({ event }: { event: SearchableEvent }) {
   return (
-    <article className="rounded-lg border border-loop-ink/10 bg-white p-6 shadow-sm">
+    <article className="rounded-lg border border-loop-ink/10 bg-loop-surface p-6 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-loop-moss/20 bg-loop-mist px-3 py-1 text-xs font-semibold uppercase tracking-wide text-loop-moss">
           {formatEventPrice(event)}

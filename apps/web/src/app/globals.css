@@ -4,12 +4,29 @@
 
 :root {
   color-scheme: light;
-  background: #f6f8f4;
-  color: #17201b;
+  --color-loop-ink: 23 32 27;
+  --color-loop-moss: 45 106 79;
+  --color-loop-leaf: 82 183 136;
+  --color-loop-sun: 242 204 143;
+  --color-loop-mist: 246 248 244;
+  --color-loop-surface: 255 255 255;
+  background: rgb(var(--color-loop-mist));
+  color: rgb(var(--color-loop-ink));
+}
+
+.dark {
+  color-scheme: dark;
+  --color-loop-ink: 232 239 234;
+  --color-loop-moss: 116 196 153;
+  --color-loop-leaf: 82 183 136;
+  --color-loop-sun: 232 176 105;
+  --color-loop-mist: 13 20 17;
+  --color-loop-surface: 24 35 29;
 }
 
 body {
   min-height: 100vh;
+  background: rgb(var(--color-loop-mist));
 }
 
 a {
