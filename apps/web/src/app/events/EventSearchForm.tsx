@@ -12,13 +12,14 @@ import {
   type SearchLocation
 } from "@localloop/domain";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 
 import { formatCategory } from "./format";
 
 type EventSearchFormProps = {
   initialFilters: Omit<EventSearchParams, "dateRange">;
   categories: EventCategory[];
+  activeSummary: string;
 };
 
 const dateLabels = {
@@ -46,12 +47,18 @@ type GeocodeResponse = {
   results?: LocationCandidate[];
 };
 
-export function EventSearchForm({ initialFilters, categories }: EventSearchFormProps) {
+export function EventSearchForm({
+  initialFilters,
+  categories,
+  activeSummary
+}: EventSearchFormProps) {
   const router = useRouter();
+  const filterRegionId = useId();
   const [locationInput, setLocationInput] = useState(initialFilters.location.displayName);
   const [selectedLocation, setSelectedLocation] = useState<SearchLocation | null>(
     initialFilters.location
   );
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [locationNotice, setLocationNotice] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<LocationCandidate[]>([]);
@@ -172,154 +179,180 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-10 rounded-lg border border-loop-ink/10 bg-loop-surface p-5 shadow-sm md:p-6"
+      className="sticky z-20 mt-8 rounded-lg border border-loop-ink/10 bg-loop-surface/95 p-3 shadow-sm backdrop-blur md:mt-10 md:p-5"
+      style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
     >
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="relative flex flex-col gap-2 md:col-span-2">
-          <label htmlFor="event-location" className="text-sm font-semibold">
-            Location
-          </label>
-          <input
-            id="event-location"
-            type="text"
-            value={locationInput}
-            onChange={(event) => updateLocationInput(event.target.value)}
-            placeholder="Address, neighborhood, city, or ZIP code"
-            autoComplete="off"
-            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-          />
-          {locationSuggestions.length > 0 ? (
-            <div className="absolute left-0 right-0 top-[4.75rem] z-10 overflow-hidden rounded-lg border border-loop-ink/10 bg-loop-surface shadow-lg">
-              {locationSuggestions.map((candidate) => (
-                <button
-                  key={candidate.id}
-                  type="button"
-                  onClick={() => selectLocation(candidate)}
-                  className="block w-full px-3 py-2 text-left text-sm leading-5 hover:bg-loop-mist"
-                >
-                  {candidate.displayName}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <span className="min-h-5 text-xs leading-5 text-loop-ink/60">
-            {selectedLocation
-              ? `Using ${selectedLocation.displayName}`
-              : isFindingLocations
-                ? "Finding locations..."
-                : locationNotice || "Choose a suggestion to set coordinates for search."}
-          </span>
-          {locationError ? (
-            <span className="text-xs font-semibold leading-5 text-red-700">{locationError}</span>
-          ) : null}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-loop-moss">
+            Active search
+          </p>
+          <p className="mt-1 text-sm leading-6 text-loop-ink/75">{activeSummary}</p>
         </div>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Radius</span>
-          <select
-            value={radius}
-            onChange={(event) => setRadius(Number(event.target.value) as typeof radius)}
-            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-          >
-            {eventSearchRadii.map((value) => (
-              <option key={value} value={value}>
-                {value} miles
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Date</span>
-          <select
-            value={date}
-            onChange={(event) => setDate(event.target.value as typeof date)}
-            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-          >
-            {eventDatePresets.map((value) => (
-              <option key={value} value={value}>
-                {dateLabels[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {date === "custom" ? (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">From</span>
-            <input
-              type="date"
-              value={from}
-              onChange={(event) => setFrom(event.target.value)}
-              className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">To</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-            />
-          </label>
-        </div>
-      ) : null}
-
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        <CategoryCheckboxes
-          label="Include categories"
-          categories={categories}
-          selected={include}
-          onChange={setInclude}
-        />
-        <CategoryCheckboxes
-          label="Exclude categories"
-          categories={categories}
-          selected={exclude}
-          onChange={setExclude}
-        />
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
-        <label className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Price</span>
-          <select
-            value={price}
-            onChange={(event) => setPrice(event.target.value as typeof price)}
-            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-          >
-            {eventSearchPrices.map((value) => (
-              <option key={value} value={value}>
-                {priceLabels[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">Sort</span>
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as typeof sort)}
-            className="rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
-          >
-            {eventSearchSorts.map((value) => (
-              <option key={value} value={value}>
-                {sortLabels[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <button
-          type="submit"
-          className="self-end rounded-lg bg-loop-moss px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink dark:hover:bg-loop-leaf"
+          type="button"
+          aria-controls={filterRegionId}
+          aria-expanded={filtersExpanded}
+          onClick={() => setFiltersExpanded((isExpanded) => !isExpanded)}
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-loop-ink/15 px-4 py-2 text-sm font-semibold text-loop-ink transition hover:border-loop-moss hover:text-loop-moss md:hidden"
         >
-          Search events
+          {filtersExpanded ? "Hide filters" : "Edit search"}
         </button>
+      </div>
+
+      <div
+        id={filterRegionId}
+        className={`mt-4 border-t border-loop-ink/10 pt-4 md:block ${
+          filtersExpanded ? "block max-h-[calc(100dvh-7rem)] overflow-y-auto pr-1" : "hidden"
+        } md:max-h-none md:overflow-visible md:pr-0`}
+      >
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="relative flex flex-col gap-2 md:col-span-2">
+            <label htmlFor="event-location" className="text-sm font-semibold">
+              Location
+            </label>
+            <input
+              id="event-location"
+              type="text"
+              value={locationInput}
+              onChange={(event) => updateLocationInput(event.target.value)}
+              placeholder="Address, neighborhood, city, or ZIP code"
+              autoComplete="off"
+              className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+            />
+            {locationSuggestions.length > 0 ? (
+              <div className="absolute left-0 right-0 top-[4.75rem] z-30 overflow-hidden rounded-lg border border-loop-ink/10 bg-loop-surface shadow-lg">
+                {locationSuggestions.map((candidate) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    onClick={() => selectLocation(candidate)}
+                    className="block min-h-11 w-full px-3 py-2 text-left text-sm leading-5 hover:bg-loop-mist"
+                  >
+                    {candidate.displayName}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <span className="min-h-5 text-xs leading-5 text-loop-ink/60">
+              {selectedLocation
+                ? `Using ${selectedLocation.displayName}`
+                : isFindingLocations
+                  ? "Finding locations..."
+                  : locationNotice || "Choose a suggestion to set coordinates for search."}
+            </span>
+            {locationError ? (
+              <span className="text-xs font-semibold leading-5 text-red-700">{locationError}</span>
+            ) : null}
+          </div>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Radius</span>
+            <select
+              value={radius}
+              onChange={(event) => setRadius(Number(event.target.value) as typeof radius)}
+              className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+            >
+              {eventSearchRadii.map((value) => (
+                <option key={value} value={value}>
+                  {value} miles
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Date</span>
+            <select
+              value={date}
+              onChange={(event) => setDate(event.target.value as typeof date)}
+              className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+            >
+              {eventDatePresets.map((value) => (
+                <option key={value} value={value}>
+                  {dateLabels[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {date === "custom" ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-semibold">From</span>
+              <input
+                type="date"
+                value={from}
+                onChange={(event) => setFrom(event.target.value)}
+                className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-semibold">To</span>
+              <input
+                type="date"
+                value={to}
+                onChange={(event) => setTo(event.target.value)}
+                className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <CategoryCheckboxes
+            label="Include categories"
+            categories={categories}
+            selected={include}
+            onChange={setInclude}
+          />
+          <CategoryCheckboxes
+            label="Exclude categories"
+            categories={categories}
+            selected={exclude}
+            onChange={setExclude}
+          />
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Price</span>
+            <select
+              value={price}
+              onChange={(event) => setPrice(event.target.value as typeof price)}
+              className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+            >
+              {eventSearchPrices.map((value) => (
+                <option key={value} value={value}>
+                  {priceLabels[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Sort</span>
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value as typeof sort)}
+              className="min-h-11 rounded-lg border border-loop-ink/15 bg-loop-surface px-3 py-2 text-sm"
+            >
+              {eventSearchSorts.map((value) => (
+                <option key={value} value={value}>
+                  {sortLabels[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="min-h-11 self-end rounded-lg bg-loop-moss px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-loop-ink dark:hover:bg-loop-leaf"
+          >
+            Search events
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -343,7 +376,7 @@ function CategoryCheckboxes({
         {categories.map((category) => (
           <label
             key={category}
-            className="flex items-center gap-2 rounded-lg border border-loop-ink/10 px-3 py-2 text-sm"
+            className="flex min-h-11 items-center gap-2 rounded-lg border border-loop-ink/10 px-3 py-2 text-sm"
           >
             <input
               type="checkbox"

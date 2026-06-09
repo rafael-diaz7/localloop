@@ -15,6 +15,13 @@ const categoryLabels: Record<string, string> = {
 };
 
 const eventPreviewDescriptionMaxLength = 160;
+const eventSourceBadgeMaxLength = 24;
+const compactSourceLabels: Record<string, string> = {
+  "Arlington County Government": "Arlington County",
+  "Arlington County, Virginia": "Arlington County",
+  "Smithsonian Institution": "Smithsonian",
+  "Ticketmaster Discovery API": "Ticketmaster"
+};
 
 export function formatCategory(category: string) {
   return categoryLabels[category] ?? category;
@@ -36,6 +43,13 @@ export function formatEventPrice(
 
 export function formatEventPreviewDescription(description: string) {
   return truncateText(description, eventPreviewDescriptionMaxLength);
+}
+
+export function formatEventSourceBadge(sourceDisplayName: string) {
+  const normalized = sourceDisplayName.replace(/\s+/g, " ").trim();
+  const compactLabel = compactSourceLabels[normalized] ?? normalized;
+
+  return truncateText(compactLabel, eventSourceBadgeMaxLength);
 }
 
 export function formatDistanceMiles(distanceMiles: number) {

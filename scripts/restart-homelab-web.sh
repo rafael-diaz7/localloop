@@ -19,6 +19,9 @@ pnpm build
 log "Restarting ${SERVICE_NAME}; sudo may prompt for your password."
 sudo systemctl restart "${SERVICE_NAME}"
 
+log "Waiting briefly for ${SERVICE_NAME} to come back up."
+sleep 3
+
 log "Smoke checking ${HEALTH_URL}."
 curl -fsS "${HEALTH_URL}" >/dev/null
 

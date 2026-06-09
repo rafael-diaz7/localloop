@@ -4,7 +4,8 @@ import {
   formatCategory,
   formatDistanceMiles,
   formatEventPreviewDescription,
-  formatEventPrice
+  formatEventPrice,
+  formatEventSourceBadge
 } from "./format";
 
 describe("event card formatting", () => {
@@ -60,6 +61,14 @@ describe("event card formatting", () => {
   it("leaves short event preview descriptions unchanged", () => {
     expect(formatEventPreviewDescription("A compact neighborhood market.")).toBe(
       "A compact neighborhood market."
+    );
+  });
+
+  it("formats compact source badge labels", () => {
+    expect(formatEventSourceBadge("Smithsonian Institution")).toBe("Smithsonian");
+    expect(formatEventSourceBadge("Ticketmaster Discovery API")).toBe("Ticketmaster");
+    expect(formatEventSourceBadge("A very long regional events calendar")).toBe(
+      "A very long regional…"
     );
   });
 });
