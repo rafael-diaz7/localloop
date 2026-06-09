@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+export type SearchLocation = {
+  displayName: string;
+  latitude: number;
+  longitude: number;
+};
+
 export const dmvSearchLocations = [
   {
     slug: "courthouse-arlington-va",
@@ -40,6 +46,11 @@ export const dmvSearchLocations = [
 ] as const;
 
 export const defaultDmvSearchLocationSlug = "courthouse-arlington-va";
+export const defaultSearchLocation: SearchLocation = {
+  displayName: "Courthouse, Arlington, VA",
+  latitude: 38.8904,
+  longitude: -77.0869
+};
 
 export const dmvSearchLocationSlugSchema = z.enum(
   dmvSearchLocations.map((location) => location.slug) as [

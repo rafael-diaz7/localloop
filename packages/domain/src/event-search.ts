@@ -1,11 +1,7 @@
 import { z } from "zod";
 
 import { eventCategories, eventCategorySchema, type EventCategory } from "./categories";
-import {
-  defaultDmvSearchLocationSlug,
-  dmvSearchLocationSlugSchema,
-  type DmvSearchLocationSlug
-} from "./locations";
+import { defaultSearchLocation, type SearchLocation } from "./locations";
 
 export const dmvTimeZone = "America/New_York";
 export const eventSearchRadii = [1, 3, 5, 10, 25] as const;
@@ -36,7 +32,7 @@ export type EventDateRange = {
 };
 
 export type EventSearchParams = {
-  near: DmvSearchLocationSlug;
+  location: SearchLocation;
   radius: EventSearchRadius;
   date: EventDatePreset;
   from?: string;
@@ -67,11 +63,10 @@ export function parseEventSearchParams(
 ): ParsedEventSearchParams {
   const reader = createSearchParamReader(input);
   const ignoredParams: string[] = [];
-  const near = parseWithFallback(
-    "near",
-    reader.first("near"),
-    dmvSearchLocationSlugSchema,
-    defaultDmvSearchLocationSlug,
+  const location = parseSearchLocation(
+    reader.first("lat"),
+    reader.first("lng"),
+    reader.first("place"),
     ignoredParams
   );
   const radius = parseRadius(reader.first("radius"), ignoredParams);
@@ -108,7 +103,7 @@ export function parseEventSearchParams(
 
   return {
     filters: {
-      near,
+      location,
       radius,
       date: resolvedDate,
       from: resolvedDate === "custom" ? customRange?.from : undefined,
@@ -129,7 +124,11 @@ export function parseEventSearchParams(
 export function serializeEventSearchParams(filters: Omit<EventSearchParams, "dateRange">) {
   const params = new URLSearchParams();
 
-  params.set("near", filters.near);
+  params.set("lat", formatCoordinate(filters.location.latitude));
+  params.set("lng", formatCoordinate(filters.location.longitude));
+  if (filters.location.displayName) {
+    params.set("place", filters.location.displayName);
+  }
   params.set("radius", String(filters.radius));
   params.set("date", filters.date);
 
@@ -150,6 +149,56 @@ export function serializeEventSearchParams(filters: Omit<EventSearchParams, "dat
   params.set("sort", filters.sort);
 
   return params.toString();
+}
+
+function parseSearchLocation(
+  rawLatitude: string | undefined,
+  rawLongitude: string | undefined,
+  rawDisplayName: string | undefined,
+  ignoredParams: string[]
+): SearchLocation {
+  if (!rawLatitude && !rawLongitude) {
+    return defaultSearchLocation;
+  }
+
+  const latitude = rawLatitude === undefined ? NaN : Number(rawLatitude);
+  const longitude = rawLongitude === undefined ? NaN : Number(rawLongitude);
+  const validLatitude = Number.isFinite(latitude) && latitude >= -90 && latitude <= 90;
+  const validLongitude = Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+
+  if (!validLatitude || !validLongitude) {
+    if (!validLatitude) {
+      ignoredParams.push("lat");
+    }
+    if (!validLongitude) {
+      ignoredParams.push("lng");
+    }
+    return defaultSearchLocation;
+  }
+
+  const displayName = rawDisplayName?.trim();
+
+  if (displayName && displayName.length <= 160) {
+    return {
+      displayName,
+      latitude,
+      longitude
+    };
+  }
+
+  if (rawDisplayName !== undefined && displayName) {
+    ignoredParams.push("place");
+  }
+
+  return {
+    displayName: `${formatCoordinate(latitude)}, ${formatCoordinate(longitude)}`,
+    latitude,
+    longitude
+  };
+}
+
+function formatCoordinate(value: number) {
+  return value.toFixed(6).replace(/\.?0+$/, "");
 }
 
 export function resolveDatePresetRange(

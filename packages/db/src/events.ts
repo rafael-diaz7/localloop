@@ -1,10 +1,10 @@
 import type {
-  DmvSearchLocation,
   EventCategory,
   EventDateRange,
   EventPriceStatus,
   EventSearchPrice,
-  EventSearchSort
+  EventSearchSort,
+  SearchLocation
 } from "@localloop/domain";
 import { and, asc, eq, gte, sql } from "drizzle-orm";
 
@@ -42,7 +42,7 @@ export type EventDetail = UpcomingEvent & {
 };
 
 export type SearchEventsInput = {
-  location: Pick<DmvSearchLocation, "latitude" | "longitude">;
+  location: Pick<SearchLocation, "latitude" | "longitude">;
   radiusMiles: number;
   dateRange: EventDateRange;
   includedCategories: EventCategory[];

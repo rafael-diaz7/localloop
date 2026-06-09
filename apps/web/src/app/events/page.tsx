@@ -1,7 +1,6 @@
 import { createDbConnection, searchEvents, type SearchableEvent } from "@localloop/db";
 import {
   allEventSearchCategories,
-  getDmvSearchLocation,
   parseEventSearchParams,
   type EventSearchParams
 } from "@localloop/domain";
@@ -32,11 +31,10 @@ const dateSummaryLabels = {
 
 async function getSearchResults(filters: EventSearchParams, now: Date) {
   const connection = createDbConnection();
-  const location = getDmvSearchLocation(filters.near);
 
   try {
     return await searchEvents(connection.db, {
-      location,
+      location: filters.location,
       radiusMiles: filters.radius,
       dateRange: filters.dateRange,
       includedCategories: filters.include,
@@ -55,7 +53,6 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
   const now = new Date();
   const parsedSearch = parseEventSearchParams(rawSearchParams, now);
   const { filters } = parsedSearch;
-  const location = getDmvSearchLocation(filters.near);
   let events: SearchableEvent[] = [];
   let loadError = false;
 
@@ -89,7 +86,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
 
         <EventSearchForm
           initialFilters={{
-            near: filters.near,
+            location: filters.location,
             radius: filters.radius,
             date: filters.date,
             from: filters.from,
@@ -119,7 +116,7 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
         ) : (
           <EventResults
             events={events}
-            summary={`Within ${filters.radius} miles of ${location.displayName} · ${formatDateSummary(filters)}`}
+            summary={`Within ${filters.radius} miles of ${filters.location.displayName} · ${formatDateSummary(filters)}`}
           />
         )}
       </section>

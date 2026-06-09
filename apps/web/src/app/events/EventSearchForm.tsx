@@ -1,17 +1,18 @@
 "use client";
 
 import {
-  dmvSearchLocations,
   eventDatePresets,
   eventSearchPrices,
   eventSearchRadii,
   eventSearchSorts,
   serializeEventSearchParams,
   type EventCategory,
-  type EventSearchParams
+  type EventSearchParams,
+  type LocationCandidate,
+  type SearchLocation
 } from "@localloop/domain";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { formatCategory } from "./format";
 
@@ -40,9 +41,21 @@ const sortLabels = {
   closest: "Closest"
 };
 
+type GeocodeResponse = {
+  error?: string;
+  results?: LocationCandidate[];
+};
+
 export function EventSearchForm({ initialFilters, categories }: EventSearchFormProps) {
   const router = useRouter();
-  const [near, setNear] = useState(initialFilters.near);
+  const [locationInput, setLocationInput] = useState(initialFilters.location.displayName);
+  const [selectedLocation, setSelectedLocation] = useState<SearchLocation | null>(
+    initialFilters.location
+  );
+  const [locationError, setLocationError] = useState("");
+  const [locationNotice, setLocationNotice] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationCandidate[]>([]);
+  const [isFindingLocations, setIsFindingLocations] = useState(false);
   const [radius, setRadius] = useState(initialFilters.radius);
   const [date, setDate] = useState(initialFilters.date);
   const [from, setFrom] = useState(initialFilters.from ?? "");
@@ -52,11 +65,74 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
   const [price, setPrice] = useState(initialFilters.price);
   const [sort, setSort] = useState(initialFilters.sort);
 
+  useEffect(() => {
+    const trimmedLocation = locationInput.trim();
+
+    if (selectedLocation && trimmedLocation === selectedLocation.displayName) {
+      setLocationSuggestions([]);
+      setLocationNotice("");
+      setIsFindingLocations(false);
+      return;
+    }
+
+    if (trimmedLocation.length < 2) {
+      setLocationSuggestions([]);
+      setLocationNotice("");
+      setIsFindingLocations(false);
+      return;
+    }
+
+    let isCurrent = true;
+    const timeout = setTimeout(async () => {
+      setIsFindingLocations(true);
+
+      try {
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(trimmedLocation)}`);
+        const body = (await response.json()) as GeocodeResponse;
+
+        if (!isCurrent) {
+          return;
+        }
+
+        if (!response.ok) {
+          setLocationSuggestions([]);
+          setLocationNotice(body.error ?? "Location search is unavailable right now.");
+          return;
+        }
+
+        const results = body.results ?? [];
+        setLocationSuggestions(results);
+        setLocationNotice(
+          results.length === 0 ? "No matching locations found. Try a more specific place." : ""
+        );
+      } catch {
+        if (isCurrent) {
+          setLocationSuggestions([]);
+          setLocationNotice("Location search is unavailable right now.");
+        }
+      } finally {
+        if (isCurrent) {
+          setIsFindingLocations(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timeout);
+    };
+  }, [locationInput, selectedLocation]);
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!selectedLocation) {
+      setLocationError("Choose a location from the suggestions before searching.");
+      return;
+    }
+
     const query = serializeEventSearchParams({
-      near,
+      location: selectedLocation,
       radius,
       date,
       from: date === "custom" ? from : undefined,
@@ -70,29 +146,73 @@ export function EventSearchForm({ initialFilters, categories }: EventSearchFormP
     router.push(`/events?${query}`);
   }
 
+  function updateLocationInput(value: string) {
+    setLocationInput(value);
+    setLocationError("");
+
+    if (selectedLocation && value !== selectedLocation.displayName) {
+      setSelectedLocation(null);
+    }
+  }
+
+  function selectLocation(candidate: LocationCandidate) {
+    const nextLocation = {
+      displayName: candidate.displayName,
+      latitude: candidate.latitude,
+      longitude: candidate.longitude
+    };
+
+    setSelectedLocation(nextLocation);
+    setLocationInput(nextLocation.displayName);
+    setLocationError("");
+    setLocationNotice("");
+    setLocationSuggestions([]);
+  }
+
   return (
     <form
       onSubmit={onSubmit}
       className="mt-10 rounded-lg border border-loop-ink/10 bg-white p-5 shadow-sm md:p-6"
     >
       <div className="grid gap-4 md:grid-cols-4">
-        <label className="flex flex-col gap-2 md:col-span-2">
-          <span className="text-sm font-semibold">Location</span>
-          <select
-            value={near}
-            onChange={(event) => setNear(event.target.value as typeof near)}
+        <div className="relative flex flex-col gap-2 md:col-span-2">
+          <label htmlFor="event-location" className="text-sm font-semibold">
+            Location
+          </label>
+          <input
+            id="event-location"
+            type="text"
+            value={locationInput}
+            onChange={(event) => updateLocationInput(event.target.value)}
+            placeholder="Address, neighborhood, city, or ZIP code"
+            autoComplete="off"
             className="rounded-lg border border-loop-ink/15 bg-white px-3 py-2 text-sm"
-          >
-            {dmvSearchLocations.map((location) => (
-              <option key={location.slug} value={location.slug}>
-                {location.displayName}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs leading-5 text-loop-ink/60">
-            Location search currently uses preset DMV areas. Address search is coming later.
+          />
+          {locationSuggestions.length > 0 ? (
+            <div className="absolute left-0 right-0 top-[4.75rem] z-10 overflow-hidden rounded-lg border border-loop-ink/10 bg-white shadow-lg">
+              {locationSuggestions.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => selectLocation(candidate)}
+                  className="block w-full px-3 py-2 text-left text-sm leading-5 hover:bg-loop-mist"
+                >
+                  {candidate.displayName}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <span className="min-h-5 text-xs leading-5 text-loop-ink/60">
+            {selectedLocation
+              ? `Using ${selectedLocation.displayName}`
+              : isFindingLocations
+                ? "Finding locations..."
+                : locationNotice || "Choose a suggestion to set coordinates for search."}
           </span>
-        </label>
+          {locationError ? (
+            <span className="text-xs font-semibold leading-5 text-red-700">{locationError}</span>
+          ) : null}
+        </div>
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold">Radius</span>

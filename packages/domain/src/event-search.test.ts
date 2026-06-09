@@ -14,7 +14,8 @@ describe("event URL search parameters", () => {
   it("falls back to defaults for missing or invalid values", () => {
     const parsed = parseEventSearchParams(
       {
-        near: "unknown-place",
+        lat: "way-north",
+        lng: "-181",
         radius: "2",
         date: "next-year",
         include: "music,nope,food-drink",
@@ -26,7 +27,11 @@ describe("event URL search parameters", () => {
     );
 
     expect(parsed.filters).toMatchObject({
-      near: "courthouse-arlington-va",
+      location: {
+        displayName: "Courthouse, Arlington, VA",
+        latitude: 38.8904,
+        longitude: -77.0869
+      },
       radius: 10,
       date: "next-7-days",
       include: ["music", "food-drink"],
@@ -35,7 +40,8 @@ describe("event URL search parameters", () => {
       sort: "soonest"
     });
     expect(parsed.ignoredParams).toEqual([
-      "near",
+      "lat",
+      "lng",
       "radius",
       "date",
       "include",
@@ -61,10 +67,43 @@ describe("event URL search parameters", () => {
     expect(parsed.filters.include).toEqual(["music", "community", "education"]);
   });
 
+  it("deserializes coordinate search parameters", () => {
+    const parsed = parseEventSearchParams(
+      {
+        lat: "38.8897",
+        lng: "-77.0869",
+        place: "Courthouse, Arlington, VA",
+        radius: "5"
+      },
+      now
+    );
+
+    expect(parsed.filters.location).toEqual({
+      displayName: "Courthouse, Arlington, VA",
+      latitude: 38.8897,
+      longitude: -77.0869
+    });
+    expect(parsed.filters.radius).toBe(5);
+    expect(parsed.ignoredParams).toEqual([]);
+  });
+
+  it("falls back for invalid coordinate search parameters", () => {
+    const parsed = parseEventSearchParams({ lat: "91", lng: "oops" }, now);
+
+    expect(parsed.filters.location).toEqual({
+      displayName: "Courthouse, Arlington, VA",
+      latitude: 38.8904,
+      longitude: -77.0869
+    });
+    expect(parsed.ignoredParams).toEqual(["lat", "lng"]);
+  });
+
   it("serializes query parameters deterministically", () => {
     const parsed = parseEventSearchParams(
       {
-        near: "dupont-circle-dc",
+        lat: "38.9097",
+        lng: "-77.0434",
+        place: "Dupont Circle, Washington, DC",
         radius: "3",
         date: "custom",
         from: "2026-06-06",
@@ -78,7 +117,7 @@ describe("event URL search parameters", () => {
     );
 
     expect(serializeEventSearchParams(parsed.filters)).toBe(
-      "near=dupont-circle-dc&radius=3&date=custom&from=2026-06-06&to=2026-06-07&include=music%2Ccommunity&exclude=sports-fitness&price=paid&sort=closest"
+      "lat=38.9097&lng=-77.0434&place=Dupont+Circle%2C+Washington%2C+DC&radius=3&date=custom&from=2026-06-06&to=2026-06-07&include=music%2Ccommunity&exclude=sports-fitness&price=paid&sort=closest"
     );
   });
 });

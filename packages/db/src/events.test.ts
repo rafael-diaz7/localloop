@@ -37,6 +37,26 @@ describe("public event search query", () => {
     expect(compiled).toContain("hidden_egm.decision = 'rejected'");
     expect(compiled).toContain("hidden_egm.reasons->>'standaloneAddon' = 'true'");
   });
+
+  it("executes radius search with selected coordinates", () => {
+    const query = buildSearchEventsSql(
+      searchInput({
+        location: {
+          latitude: 38.8897,
+          longitude: -77.0869
+        }
+      })
+    ).toQuery({
+      casing: new CasingCache(),
+      escapeName: (name) => `"${name}"`,
+      escapeParam: (index) => `$${index + 1}`,
+      escapeString: (value) => `'${value}'`,
+      prepareTyping: () => "none"
+    });
+
+    expect(query.sql).toContain("ST_MakePoint($1, $2)");
+    expect(query.params.slice(0, 2)).toEqual([-77.0869, 38.8897]);
+  });
 });
 
 describe("public event detail query", () => {
@@ -133,7 +153,7 @@ function compileSearchSql() {
   }).sql;
 }
 
-function searchInput(): SearchEventsInput {
+function searchInput(overrides: Partial<SearchEventsInput> = {}): SearchEventsInput {
   return {
     location: {
       latitude: 38.8904,
@@ -148,7 +168,8 @@ function searchInput(): SearchEventsInput {
     excludedCategories: [],
     price: "any",
     sort: "soonest",
-    now: fixedNow
+    now: fixedNow,
+    ...overrides
   };
 }
 

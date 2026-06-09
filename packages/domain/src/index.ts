@@ -19,6 +19,13 @@ export {
   type EventPriceRangeInput
 } from "./event-price";
 export {
+  GeocodingError,
+  NominatimGeocoder,
+  type Geocoder,
+  type GeocodingErrorCode,
+  type LocationCandidate
+} from "./geocoding";
+export {
   allEventSearchCategories,
   dmvTimeZone,
   eventCategorySetMatchesFilters,
@@ -56,10 +63,12 @@ export {
   type LocalLoopEvent
 } from "./event";
 export {
+  defaultSearchLocation,
   defaultDmvSearchLocationSlug,
   dmvSearchLocations,
   dmvSearchLocationSlugSchema,
   getDmvSearchLocation,
   type DmvSearchLocation,
-  type DmvSearchLocationSlug
+  type DmvSearchLocationSlug,
+  type SearchLocation
 } from "./locations";
