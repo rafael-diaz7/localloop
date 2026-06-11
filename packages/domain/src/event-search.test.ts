@@ -16,7 +16,7 @@ describe("event URL search parameters", () => {
       {
         lat: "way-north",
         lng: "-181",
-        radius: "2",
+        radius: "101",
         date: "next-year",
         include: "music,nope,food-drink",
         exclude: "sports-fitness,also-nope",
@@ -53,7 +53,7 @@ describe("event URL search parameters", () => {
 
   it("parses supported radius, price, sort, and repeated category parameters", () => {
     const params = new URLSearchParams();
-    params.set("radius", "25");
+    params.set("radius", "75");
     params.set("price", "free");
     params.set("sort", "closest");
     params.append("include", "music");
@@ -61,7 +61,7 @@ describe("event URL search parameters", () => {
 
     const parsed = parseEventSearchParams(params, now);
 
-    expect(parsed.filters.radius).toBe(25);
+    expect(parsed.filters.radius).toBe(75);
     expect(parsed.filters.price).toBe("free");
     expect(parsed.filters.sort).toBe("closest");
     expect(parsed.filters.include).toEqual(["music", "community", "education"]);

@@ -4,18 +4,12 @@ import { eventCategories, eventCategorySchema, type EventCategory } from "./cate
 import { defaultSearchLocation, type SearchLocation } from "./locations";
 
 export const dmvTimeZone = "America/New_York";
-export const eventSearchRadii = [1, 3, 5, 10, 25] as const;
+export const eventSearchRadii = [5, 10, 25, 50, 100] as const;
 export const eventDatePresets = ["today", "tomorrow", "weekend", "next-7-days", "custom"] as const;
 export const eventSearchPrices = ["any", "free", "paid", "unknown"] as const;
 export const eventSearchSorts = ["soonest", "closest"] as const;
 
-export const eventSearchRadiusSchema = z.union([
-  z.literal(1),
-  z.literal(3),
-  z.literal(5),
-  z.literal(10),
-  z.literal(25)
-]);
+export const eventSearchRadiusSchema = z.coerce.number().int().min(1).max(100);
 export const eventDatePresetSchema = z.enum(eventDatePresets);
 export const eventSearchPriceSchema = z.enum(eventSearchPrices);
 export const eventSearchSortSchema = z.enum(eventSearchSorts);
@@ -264,8 +258,7 @@ export function eventCategorySetMatchesFilters(
 }
 
 function parseRadius(rawValue: string | undefined, ignoredParams: string[]) {
-  const parsedNumber = rawValue ? Number(rawValue) : defaultRadius;
-  const parsed = eventSearchRadiusSchema.safeParse(parsedNumber);
+  const parsed = eventSearchRadiusSchema.safeParse(rawValue ?? defaultRadius);
 
   if (parsed.success) {
     return parsed.data;
